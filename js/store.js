@@ -7,7 +7,8 @@ const blank = () => ({ user: null, pts: 0, donated: 0, wallet: '', doors: [], go
 class Base {
   cbs = []; s = blank();
   get state() { return this.s; }
-  logout() {}
+  logout() {} deleteAccount() {}
+  recordPlay(id, score, pts) { const t = this.s.stats ||= { plays: {}, best: {}, earned: 0 }; t.plays[id] = (t.plays[id] || 0) + 1; t.best[id] = Math.max(t.best[id] || 0, score); t.earned += pts; this.addPoints(pts); }
   onChange(f) { this.cbs.push(f); }
   emit() { this.cbs.forEach(f => f()); }
   addPoints(n) { this.s.pts += n; this.dirty(); this.emit(); }
@@ -25,14 +26,15 @@ class Demo extends Base {   // localStorage backend with several test accounts (
     this.s.goals = this.db.goals; this.sel(this.db.me);
   }
   sel(id) { const u = this.db.users[id]; this.db.me = u ? id : null; this.s.user = u ? { id, name: u.name, color: u.color } : null;
-    Object.assign(this.s, { pts: u?.pts || 0, donated: u?.donated || 0, wallet: u?.wallet || '', doors: u?.doors || [] }); }
-  save() { const u = this.db.users[this.db.me]; if (u) Object.assign(u, { pts: this.s.pts, donated: this.s.donated, wallet: this.s.wallet, doors: this.s.doors });
+    Object.assign(this.s, { pts: u?.pts || 0, donated: u?.donated || 0, wallet: u?.wallet || '', doors: u?.doors || [], stats: u?.stats || { plays: {}, best: {}, earned: 0 } }); }
+  save() { const u = this.db.users[this.db.me]; if (u) Object.assign(u, { pts: this.s.pts, donated: this.s.donated, wallet: this.s.wallet, doors: this.s.doors, stats: this.s.stats });
     localStorage.setItem(KEY, JSON.stringify(this.db)); }
   async init() { return this.s.user; }
   async login() { const p = await discordLogin(); if (!p) return null;
-    this.db.users[p.id] ||= { name: p.name, color: p.color, pts: 0, donated: 0, wallet: '', doors: [] };
+    this.db.users[p.id] ||= { name: p.name, color: p.color, pts: 0, donated: 0, wallet: '', doors: [], stats: { plays: {}, best: {}, earned: 0 } };
     this.sel(p.id); this.save(); this.emit(); return this.s.user; }
   logout() { this.save(); this.sel(null); this.save(); this.emit(); }
+  deleteAccount() { delete this.db.users[this.db.me]; this.sel(null); this.save(); this.emit(); }
   dirty() { this.save(); } donateHook() { this.save(); }
   setWallet(a) { this.s.wallet = a; this.save(); }
   openDoor(d, r) { this.s.doors.push(d); this.s.pts += r; this.save(); this.emit(); }
@@ -56,9 +58,9 @@ class Fire extends Base {
   }
   async load(u) {
     const { doc, getDoc, setDoc } = this.fs, ref = this.uref = doc(this.db, 'users', u.uid), snap = await getDoc(ref);
-    if (!snap.exists()) await setDoc(ref, { name: u.displayName || 'Elf', pts: 0, donated: 0, wallet: '', doors: [] });
+    if (!snap.exists()) await setDoc(ref, { name: u.displayName || 'Elf', pts: 0, donated: 0, wallet: '', doors: [], stats: { plays: {}, best: {}, earned: 0 } });
     const d = snap.exists() ? snap.data() : { pts: 0, donated: 0, wallet: '', doors: [] };
-    Object.assign(this.s, d, { user: { id: u.uid, name: u.displayName || d.name } }); this.emit(); return this.s.user;
+    Object.assign(this.s, d, { stats: d.stats || { plays: {}, best: {}, earned: 0 }, user: { id: u.uid, name: u.displayName || d.name } }); this.emit(); return this.s.user;
   }
   login() { if (!C.discordAuthUrl) throw new Error('Set CONFIG.discordAuthUrl (Discord Cloud Function, see README)'); location.href = C.discordAuthUrl; }
   async logout() { await this.auth.signOut(); location.reload(); }
@@ -71,12 +73,13 @@ class Fire extends Base {
   async flush() {                                // single batch, only if something changed
     if (!this.pend.touch || !this.s.user) return;
     const { writeBatch, doc, increment } = this.fs, p = this.pend, b = writeBatch(this.db);
-    b.update(this.uref, { pts: p.pts, donated: increment(p.donated) });
+    b.update(this.uref, { pts: p.pts, donated: increment(p.donated), stats: this.s.stats });
     if (p.donated) b.update(doc(this.db, 'community', 'state'), Object.fromEntries(Object.entries(p.goals).map(([k, v]) => ['goals.' + k, increment(v)])));
     this.pend = { pts: p.pts, donated: 0, goals: {} };
     try { await b.commit(); } catch (e) {                       // keep data for the next flush
       this.pend.donated += p.donated; for (const k in p.goals) this.pend.goals[k] = (this.pend.goals[k] || 0) + p.goals[k]; this.pend.touch = 1; throw e; }
   }
+  async deleteAccount() { await this.fs.deleteDoc(this.uref); try { await this.auth.currentUser.delete(); } catch { await this.auth.signOut(); } location.reload(); }
   setWallet(a) { this.s.wallet = a; this.fs.updateDoc(this.uref, { wallet: a }); }
   openDoor(d, r) { this.s.doors.push(d); this.s.pts += r; this.dirty(); this.fs.updateDoc(this.uref, { doors: this.fs.arrayUnion(d) }); this.emit(); }
   async board() {
