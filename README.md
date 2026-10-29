@@ -13,8 +13,11 @@ Right now login is a **placeholder** (`js/discord.js`): a fake "Authorize" dialo
 `discord.js` is then unused and nothing else changes.
 
 ## Files
+- `index.html` page shell · `css/style.css` (theme, room, dock) · `css/panels.css` (overlay panels, games)
 - `js/config.js` goals (room elements), prize tiers, timers, Firebase config — edit here
-- `js/store.js` Demo + Firebase backends (same interface); `js/games.js` mini-games; `js/main.js` UI
+- `js/main.js` wiring · `js/panels.js` games/goals/advent/leaderboard/prize/profile panels · `js/games.js` engine + 5 mini-games
+- `js/room.js` room scene · `js/logic.js` pool/share/next-goal maths · `js/ui.js` toasts, snow, panel layer · `js/store.js` Demo + Firebase · `js/discord.js` placeholder login
+- `assets/` all SVG art. Add a game: push an object into `GAMES` in `games.js` (id, name, img, secs, cd, max, pts, run).
 
 ## Going live (Firebase + Discord)
 1. Create a Firebase project, enable Firestore + Auth, paste the web config in `config.js`.

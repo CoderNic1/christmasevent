@@ -1,19 +1,27 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Community Christmas</title><link rel="icon" href="assets/favicon.svg"><link rel="stylesheet" href="css/style.css"></head><body>
-<div id="err" hidden></div>
-<header><h1><img src="assets/favicon.svg" width="26" alt=""> Community Christmas</h1><div id="cd" title="Until Christmas"></div>
-<div class="me"><span id="pts"></span> <button id="login">Login with Discord</button> <button id="logout" hidden>Log out</button></div></header>
-<main>
-<section id="room" class="card"><img class="bg" src="assets/room.svg" alt=""><div class="glow"></div><img id="sleigh" src="assets/sleigh.svg" alt=""><div id="items"></div>
-<div id="hint">The room is cold and empty… play games and donate points to bring Christmas back! ✨</div></section>
-<section class="card"><h2>💰 Prize pool: <span id="pool"></span></h2><div id="tiers"></div><p id="share" class="muted"></p>
-<h3>Payout wallet (EVM)</h3><input id="wallet" placeholder="0x..."> <button id="saveW">Save</button><span id="wmsg" class="muted"></span></section>
-<section class="card"><h2>🎮 Mini-games</h2><div id="games"></div><div id="arena" hidden></div></section>
-<section class="card"><h2>🎁 Community goals</h2><div id="goals"></div></section>
-<section class="card"><h2>📅 Advent calendar</h2><div id="cal"></div></section>
-<section class="card"><h2>🏆 Leaderboard</h2><ol id="board"></ol></section>
-</main><dialog id="dlg"><form method="dialog"><h3>💬 Discord login <small>(test placeholder)</small></h3>
+<title>Community Christmas</title><link rel="icon" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/panels.css"></head><body>
+<div id="snow"></div><div id="err" hidden></div>
+<header class="top"><div class="logo"><img src="assets/favicon.svg" width="34" alt=""><span>Community Christmas</span></div>
+<div id="cd" class="chip gold" title="Until Christmas"></div>
+<div class="chips"><span id="poolchip" class="chip" title="Total prize pool"></span><span id="ptschip" class="chip" title="Your points" hidden></span>
+<button id="profile" class="prof">Login with Discord</button></div></header>
+<main class="wrap">
+<div class="candy"><section id="room"><img class="bg" src="assets/room.svg" alt=""><div class="glow"></div><div id="items"></div>
+<div id="hint">The room is cold and empty… play games and donate points to bring Christmas back! ✨</div></section></div>
+<div id="next"></div>
+<nav id="dock">
+<button data-open="games"><i>🎮</i><span>Games</span><em id="b-games"></em></button>
+<button data-open="goals"><i>🎁</i><span>Goals</span><em id="b-goals"></em></button>
+<button data-open="cal"><i>📅</i><span>Advent</span><em id="b-cal"></em></button>
+<button data-open="board"><i>🏆</i><span>Leaderboard</span></button>
+<button data-open="prize"><i>💰</i><span>Prize &amp; Wallet</span></button></nav>
+<footer>Made with ❄ by the community · demo mode saves progress in your browser only</footer></main>
+<div id="layer" hidden></div><div id="toasts"></div>
+<dialog id="dlg"><form method="dialog"><h3>💬 Discord login <small>(test placeholder)</small></h3>
 <p class="muted">No real Discord connection yet. Pick any username – each name is a separate test account.</p>
-<input placeholder="username" maxlength="24" required> <button value="ok">Authorize</button> <button value="cancel" formnovalidate type="submit" class="ghost">Cancel</button></form></dialog><noscript>Please enable JavaScript.</noscript>
+<input placeholder="username" maxlength="24" required> <button value="ok">Authorize</button> <button value="cancel" formnovalidate type="submit" class="ghost">Cancel</button></form></dialog>
+<noscript>Please enable JavaScript.</noscript>
 <script>const E=m=>{const e=document.getElementById('err');e.hidden=false;e.textContent='⚠ '+m};addEventListener('error',e=>E(e.message));addEventListener('unhandledrejection',e=>E(e.reason&&e.reason.message||e.reason))</script>
 <script type="module" src="js/main.js"></script></body></html>
