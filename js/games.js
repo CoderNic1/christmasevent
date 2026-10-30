@@ -1,6 +1,7 @@
 // Game engine + 5 mini-games. Each game: secs (round countdown), cd (cooldown s), max (point cap), pts(score, extra) → points.
 import { beep } from './ui.js';
 const CK = (id, uid) => `xmas_cd_${uid}_${id}`, rnd = (a, b) => a + Math.random() * (b - a), shuffle = a => a.sort(() => Math.random() - .5);
+export const resetCooldowns = uid => GAMES.forEach(g => localStorage.removeItem(CK(g.id, uid)));
 export const cooldownLeft = (g, uid) => Math.max(0, Math.ceil((+localStorage.getItem(CK(g.id, uid)) || 0) + g.cd - Date.now() / 1000));
 const pos = (e, el) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 function float(el, x, y, txt, bad) { const e = document.createElement('b'); e.className = 'float' + (bad ? ' bad' : ''); e.textContent = txt; e.style.left = x + 'px'; e.style.top = y + 'px'; el.append(e); setTimeout(() => e.remove(), 800); }
@@ -52,7 +53,7 @@ export function startGame(g, stage, uid, done) {
   c.after = (fn, ms) => { tm.push(setTimeout(() => !c.over && fn(), ms)); };
   c.add = n => { c.score = Math.max(0, c.score + n); stage.querySelector('#sc').textContent = c.score; };
   c.end = () => { if (c.over) return; c.over = true; clear(); const pts = Math.min(g.max, Math.max(0, Math.floor(g.pts(c.score, c.extra))));
-    localStorage.setItem(CK(g.id, uid), Math.floor(Date.now() / 1000)); done(pts, c.score); };
+    localStorage.setItem(CK(g.id, uid), Math.floor(Date.now() / 1000)); done(pts, c.score, c.extra); };
   c.every(() => { stage.querySelector('#t').textContent = Math.max(0, --c.left); if (c.left <= 0) c.end(); }, 1000);
   g.run(c); return () => { c.over = true; clear(); };       // returned fn = cancel (no points, no cooldown)
 }
