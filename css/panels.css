@@ -45,3 +45,16 @@
 dialog{background:var(--card);color:#eef;border:3px solid #5865f2;border-radius:16px;max-width:380px}dialog::backdrop{background:#000a}dialog h3{margin-top:0}dialog small{color:#f5c542}
 #toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;display:grid;gap:8px;justify-items:center}
 .toast{background:#102a1c;border:2px solid #4ade80;padding:9px 18px;border-radius:99px;font-weight:800;animation:rise .25s;box-shadow:0 6px 20px #000a}.toast.bad{background:#2a1015;border-color:#ff6b7a}
+/* levels, split bar, tabs, shop, badges, radio */
+.lvl{color:var(--gold);letter-spacing:2px}.gl.gated{opacity:.55}.gl>img.dim{filter:brightness(0);opacity:.3}
+.split{display:flex;gap:6px;margin:10px 0}.split .seg{border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;font-size:.85rem;min-width:90px}.split .seg b{font-size:1.1rem}.split .seg small{opacity:.8}
+.split .b{background:linear-gradient(#2f6aa8,#214d7c)}.split .g{background:linear-gradient(#7a3fb8,#5a2a8c)}
+.tabs{display:flex;gap:8px;margin:8px 0}.lb .n small,.lb .v small{display:block;color:#9fb4d3;font-weight:600;font-size:.72rem}.lb .v{text-align:right}
+.card2{background:#112038;border:2px solid #2d4b7a;border-radius:16px;padding:12px 14px;margin-bottom:14px}.card2 h3{margin:0 0 6px}.card2 h3 small{color:#9fb4d3;font-weight:600;font-size:.7rem}
+.gcard.shop{cursor:default;gap:6px}.gcard.shop button{width:100%}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:12px}
+.badge{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;background:#112038;border:2px solid #2d4b7a;border-radius:14px;padding:12px 8px;filter:grayscale(1);opacity:.6}
+.badge i{font-style:normal;font-size:2.2rem}.badge small{color:#9fb4d3;font-size:.72rem}.badge em{font-style:normal;font-size:.72rem;color:var(--gold)}
+.badge.got{filter:none;opacity:1;border-color:var(--gold);background:#2a2610}.badge.live{border-color:#4ade80;box-shadow:0 0 14px #4ade8066}.badge.miss{opacity:.35}
+.bicons{font-size:1.4rem;display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}details.card2 summary{cursor:pointer;font-weight:800}
+.player{display:flex;gap:16px;align-items:center;margin-bottom:10px}.np{font-size:1.2rem;display:block;margin-bottom:8px}input[type=range]{padding:0;width:160px;vertical-align:middle}

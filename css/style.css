@@ -40,3 +40,34 @@ input{font:inherit;padding:8px 10px;border-radius:10px;border:2px solid #3b557f;
 #dock button i{font-style:normal;font-size:2rem}#dock em{position:absolute;top:6px;right:8px;font-style:normal;font-size:.75rem;background:var(--red);border-radius:99px;padding:1px 8px}#dock em:empty{display:none}
 footer{text-align:center;color:#7d93b5;font-size:.8rem;padding:24px 0}
 @media(max-width:640px){#hint{display:none}.logo{font-size:1.3rem}}
+/* ---- room interactions & effects ---- */
+#items img{cursor:pointer;transform-origin:50% 100%;-webkit-tap-highlight-color:transparent}
+.a-shake{animation:ashake .6s}@keyframes ashake{20%{rotate:-4deg}40%{rotate:4deg}60%{rotate:-3deg}80%{rotate:2deg}}
+.a-wave{animation:awave .8s}@keyframes awave{25%{rotate:-9deg}75%{rotate:9deg}}
+.a-pulse{animation:apulse .5s}@keyframes apulse{50%{scale:1.12}}
+.radio-on{animation:beat .5s ease-in-out infinite alternate}@keyframes beat{to{scale:1.07}}
+#items .lm1{animation:hue 3s linear infinite}#items .lm2{filter:brightness(.4)}
+#room .glow.flash{opacity:1!important;transition:none}
+.bub{position:absolute;transform:translate(-50%,-100%);background:#fff;color:#1a2a46;border-radius:14px;padding:6px 12px;font-weight:800;font-size:.85rem;pointer-events:none;z-index:6;animation:bub 2.3s forwards;max-width:220px;text-align:center;box-shadow:0 4px 14px #0007}
+.bub::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}
+@keyframes bub{0%{opacity:0;translate:0 8px}10%,85%{opacity:1;translate:0 0}100%{opacity:0;translate:0 -8px}}
+#aurora{position:absolute;inset:0 0 45% 0;opacity:0;pointer-events:none;mix-blend-mode:screen;transition:opacity 2s;background:linear-gradient(100deg,transparent 5%,#4ade8088 25%,#5aa9ff88 45%,#c77dff77 65%,#4ade8066 85%,transparent);background-size:220% 100%;animation:aur 14s ease-in-out infinite alternate;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+@keyframes aur{to{background-position:100% 0}}
+.chip.radio{cursor:pointer;color:#8ff0b0;border-color:#2a7a4a;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#next .nx{flex:1;min-width:160px}#next .nx .bar{margin:6px 0 0}
+.av.gold{border-color:var(--gold);box-shadow:0 0 0 2px #b8860b,0 0 10px var(--gold)}
+/* ---- mobile ---- */
+button,input{touch-action:manipulation}input{font-size:16px}
+@media(max-width:760px){
+ .top{padding:8px 10px;gap:6px;padding-top:calc(8px + env(safe-area-inset-top))}.logo{font-size:1.25rem}.logo img{width:26px}#cd{order:3;width:100%;text-align:center}.chips{gap:5px;margin-left:auto}.chip{padding:4px 9px;font-size:.8rem}
+ .prof{padding:6px 10px;font-size:.85rem}.wrap{padding:0 8px;margin:10px auto}.candy{padding:6px;border-radius:18px}#room{border-radius:12px}
+ #next{padding:8px 10px}#next img{width:42px;height:34px}
+ #dock{grid-template-columns:repeat(4,1fr);gap:8px}#dock button{padding:10px 2px;font-size:.68rem;border-radius:12px;border-bottom-width:4px}#dock button i{font-size:1.5rem}#dock em{top:2px;right:2px;font-size:.62rem;padding:0 5px}
+}
+@media(max-width:640px){
+ #layer{padding:0;align-items:stretch}.panel{width:100%;max-height:none;height:100dvh;border-radius:0;border-width:0}.ph{padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top))}.ph h2{font-size:1.4rem}.pb{padding:10px 10px calc(14px + env(safe-area-inset-bottom))}
+ .arena{aspect-ratio:1/1.05;max-height:66dvh}.grid{grid-template-columns:1fr 1fr;gap:10px}.gcard{padding:10px 6px}.gcard img{width:54px;height:54px}.gcard b{font-size:1rem}.gcard small{font-size:.7rem}
+ .gl{flex-wrap:wrap;gap:8px}.gl>img{width:64px;height:48px}.don input{width:100%;flex:1 1 100%}.don button{flex:1}.fall img{width:54px}.seq{padding:20px 6%}.mem{gap:6px;padding:8px}.pop{gap:6px;padding:8px}
+ .cal{grid-template-columns:repeat(4,1fr);gap:8px}.door{font-size:1.5rem}.strip{font-size:.85rem}.pool{font-size:2.3rem}.tier{flex-wrap:wrap}.badges{grid-template-columns:1fr 1fr}.player{flex-direction:column;text-align:center}
+ .lb .v{font-size:.85rem}.tabs button{flex:1}.split .seg{font-size:.7rem}
+}
