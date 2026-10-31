@@ -1,0 +1,19 @@
+// Starting point – review before going live! Replace ADMIN_UID with your Firebase Auth UID(s).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function admin() { return request.auth != null && request.auth.uid in ['ADMIN_UID']; }
+    match /config/live { allow read: if true; allow write: if admin(); }            // remote config + timed events (admin only)
+    match /community/state {
+      allow read: if true;
+      allow update: if request.auth != null && (admin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['goals','cgems','buildLocked']));
+    }
+    match /users/{uid} {
+      allow read: if true;                                                           // needed for leaderboards (top-10 queries)
+      allow create: if request.auth.uid == uid;
+      allow update: if request.auth.uid == uid && request.resource.data.donated >= resource.data.donated; // donated can never decrease
+      allow delete: if request.auth.uid == uid;
+    }
+  }
+}
+// NOTE: client-reported points are trusted here. For real-money payouts validate scoring/donations in Cloud Functions.

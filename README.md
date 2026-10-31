@@ -12,6 +12,15 @@ Right now login is a **placeholder** (`js/discord.js`): a fake "Authorize" dialo
 (stored in localStorage, with a Log out button). Real Discord = set `CONFIG.firebase` + `CONFIG.discordAuthUrl` (Cloud Functions below);
 `discord.js` is then unused and nothing else changes.
 
+## Admin: tune the game without touching code
+Everything in `config.js` is only the *default*. One Firestore document, `config/live`, is merged over it at runtime (1 read every 5 min per player).
+- **In-app Admin console** (🛠 in the dock): demo mode → add `?admin=1`; Firebase mode → put your Firebase UID in `CONFIG.admins` (and in `firestore.rules`).
+  Tabs: **Events** (push/delete timed events) · **Calendar** (min/max ❄ per advent day) · **Goals** (level targets, rename, hide) · **Economy** (base pool, tiers, split, gem rate) · **JSON** (raw doc).
+- **Or edit `config/live` by hand** in the Firebase console – see `admin/live-config.example.json` for every field.
+- **Event types** (`events[]` with ISO `start`/`end`): `banner` · `xpoints` (game ❄ ×) · `gemrate` (cheaper exchange) · `calbonus` (extra ❄ per door) · `shop` (exclusive item, kept by buyers) · `badge` (temporary badge: metric+min).
+  To add a new type, add one helper in `js/remote.js` and use it where it applies. Test events in the demo with `?t=2026-12-05T12:00`.
+- `firestore.rules` = starting-point security rules (admin-only writes to `config/live`).
+
 ## How the game works (all tunable in `js/config.js`)
 - **Goals have levels** (`levels:[{t,img,w}]`, cumulative ❄ targets). Tree 3 levels, presents 3, fireplace/lights/train 2, radio/snowman/nutcracker 1. Art per level lives in `assets/`.
 - **Nutcracker** (`final:true`) only opens when every other goal is maxed. When it is done the **Build bracket freezes** and ❄→💎 exchange opens.
