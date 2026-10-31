@@ -2,6 +2,7 @@
 const A = n => `assets/${n}.svg`;
 export const CONFIG = {
   eventStart: '2026-12-01T00:00:00', eventEnd: '2026-12-25T00:00:00',
+  admins: [],                // Firebase UIDs that may open the in-app Admin console (demo mode: add ?admin=1 to the URL)
   firebase: null,            // paste your Firebase web config object to go live
   discordAuthUrl: '',        // Cloud Function URL that starts Discord OAuth (see README)
   flushMs: 60000, pollMs: 60000, boardMs: 300000,   // batched writes / community poll / leaderboard cache
@@ -20,6 +21,7 @@ export const CONFIG = {
     { id: 'tree', name: 'Christmas Tree', x: 74, y: 84, act: 'Click to shake the tree', levels: [{ t: 400, img: A('tree1'), w: 15 }, { t: 1200, img: A('tree'), w: 19 }, { t: 3000, img: A('tree3'), w: 24 }] },
     { id: 'fire', name: 'Fireplace', x: 47, y: 74, act: 'Click to poke the fire', levels: [{ t: 600, img: A('fireplace1'), w: 22 }, { t: 1500, img: A('fireplace'), w: 22 }] },
     { id: 'presents', name: 'Presents', x: 60, y: 92, act: 'Click to shake a present', levels: [{ t: 500, img: A('presents1'), w: 6 }, { t: 1000, img: A('presents'), w: 13 }, { t: 2200, img: A('presents3'), w: 18 }] },
+    { id: 'wreath', name: 'Christmas Wreath', x: 47, y: 41.5, act: 'Click to knock on the wreath', levels: [{ t: 400, img: A('wreath1'), w: 7 }, { t: 1000, img: A('wreath2'), w: 7.5 }, { t: 2000, img: A('wreath3'), w: 8.5 }] },
     { id: 'train', name: 'Toy Train', x: 40, y: 98, cls: 'train', act: 'Click to toot the whistle', levels: [{ t: 800, img: A('train1'), w: 11 }, { t: 2000, img: A('train'), w: 16 }] },
     { id: 'radio', name: 'Christmas Radio', x: 21, y: 83, act: 'Click to turn the music on/off', levels: [{ t: 1000, img: A('radio'), w: 8 }] },
     { id: 'snowman', name: 'Garden Snowman', x: 15.6, y: 46, act: 'Click to say hi (he lives outside!)', levels: [{ t: 700, img: A('snowman'), w: 4.6 }] },
@@ -29,7 +31,7 @@ export const CONFIG = {
   shop: [
     { id: 'cdreset', name: 'Cooldown Reset', icon: '⏩', price: 5, type: 'use', qty: 1, desc: 'Instantly resets all mini-game cooldowns.' },
     { id: 'x2', name: 'Double Snowflakes', icon: '✨', price: 10, type: 'use', qty: 3, desc: 'Your next 3 game rounds give 2× ❄.' },
-    { id: 'title', name: 'Title: Elf Captain', icon: '🧝', price: 15, type: 'own', desc: 'Shown next to your name on leaderboards.' },
+    { id: 'title', name: 'Title: Elf Captain', icon: '🧝', price: 15, type: 'own', title: '🧝 Elf Captain', desc: 'Shown next to your name on leaderboards.' },
     { id: 'frame', name: 'Golden Avatar Frame', icon: '🖼️', price: 20, type: 'own', desc: 'A golden ring around your avatar.' },
     { id: 'hat', name: 'Santa Hat for the Cat', icon: '🎅', price: 25, type: 'own', desc: 'In your room the sleepy cat wears a hat.' },
   ],

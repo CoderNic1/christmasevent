@@ -26,5 +26,7 @@ export const BADGES = [
   { id: 'top10g', name: 'Gem Top 10', icon: '💠', kind: 'rank', board: 'gems', max: 10, desc: 'Be in the top 10 of the Gem leaderboard' },
   { id: 'top1g', name: 'Gem Champion', icon: '🏆', kind: 'rank', board: 'gems', max: 1, desc: 'Be #1 on the Gem leaderboard' },
 ];
+import { eventBadges } from './remote.js';
+export const allBadges = () => [...BADGES, ...eventBadges()];   // + admin-pushed event badges
 export const rankOf = (boards, kind, name) => (name ? boards[kind].findIndex(r => r[0] === name) + 1 : 0);   // 0 = not ranked
 export const holds = (b, boards, name) => { const r = rankOf(boards, b.board, name); return r > 0 && r <= b.max; };

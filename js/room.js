@@ -2,7 +2,7 @@
 import { CONFIG as C } from './config.js';
 import { $, beep } from './ui.js';
 import { ctx } from './ctx.js';
-const STARTERS = [{ id: 'cat', name: 'Sleepy cat', x: 30, y: 93, levels: [{ img: 'assets/cat.svg', w: 10 }] }, { id: 'candle', name: 'Candle', x: 12, y: 95, levels: [{ img: 'assets/candle.svg', w: 2.2 }] }];
+export const STARTERS = [{ id: 'cat', name: 'Sleepy cat', x: 30, y: 93, levels: [{ img: 'assets/cat.svg', w: 10 }] }, { id: 'candle', name: 'Candle', x: 12, y: 95, levels: [{ img: 'assets/candle.svg', w: 2.2 }] }];
 const prev = {}; let built = false;
 const pick = a => a[Math.floor(Math.random() * a.length)], anim = (el, c, ms = 700) => { el.classList.add(c); setTimeout(() => el.classList.remove(c), ms); };
 
@@ -49,6 +49,7 @@ const ACT = {
   snowman(el) { anim(el, 'a-wave'); bubble(el, pick(['Ho ho… I mean, brrr! ❄️', 'Please don’t touch my carrot!', 'Is it Christmas yet?', 'I’m cool. Literally. 😎'])); },
   nutcracker(el) { anim(el, 'a-pulse'); particles(el, ['🥜', '⭐'], 6); beep(220, 80); setTimeout(() => beep(165, 140), 90); bubble(el, pick(['🥜 Crack! Merry Christmas!', '🪖 Nutcracker reporting for duty!'])); },
   cat(el) { particles(el, ['💗', '💤'], 5); bubble(el, pick(['😻 Purr…', '😺 Mrrp!', '😽 *stretches*'])); },
+  wreath(el) { anim(el, 'a-wave'); particles(el, ['🍃', '✨', '🔴'], 6); beep(523, 90); const n = bonus('wreath', 1, 2); bubble(el, n ? `🚪 Knock knock! A treat: +${n} ❄` : '🎄 Welcome, Christmas guests!'); },
   candle(el) { particles(el, ['✨'], 4); bubble(el, '🕯️ Make a wish!'); },
 };
 export function setup(L) {

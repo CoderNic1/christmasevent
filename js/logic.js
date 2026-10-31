@@ -1,6 +1,7 @@
 // Pure game maths derived from state (S = () => state). No DOM.
 import { CONFIG as C } from './config.js';
-export const reward = n => (n % 6 === 0 ? 25 : 5) + n;
+export const range = n => { const c = C.calendar || {}, r = c.days?.[n] || c.default; if (r) return [+r[0], +r[1]]; const b = (n % 6 === 0 ? 25 : 5) + n; return [b, b]; };   // admin can set a ❄ range per day
+export const reward = n => { const [a, b] = range(n); return a + Math.floor(Math.random() * (b - a + 1)); };
 export function logic(S) {
   const val = g => S().goals[g.id] || 0, lvl = g => g.levels.filter(l => val(g) >= l.t).length, max = g => g.levels.length;
   const full = g => lvl(g) >= max(g), total = g => g.levels[max(g) - 1].t;

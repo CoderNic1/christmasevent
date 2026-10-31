@@ -3,8 +3,10 @@ import { createStore } from './store.js';
 import { logic } from './logic.js';
 import { updateRoom, setup } from './room.js';
 import { GAMES, cooldownLeft } from './games.js';
-import { BADGES } from './badges.js';
+import { allBadges } from './badges.js';
 import { Radio } from './radio.js';
+import { applyLive, events, left, nowMs } from './remote.js';
+import { isAdmin } from './admin.js';
 import { $, f, snow, toast } from './ui.js';
 import { ctx } from './ctx.js';
 import { open, refresh, bind, avatar } from './panels.js';
@@ -15,7 +17,7 @@ let bt = 0; async function loadBoards() { if (Date.now() - bt < 20000) return; b
 
 function checkBadges() {          // award permanent + limited badges (rank badges are live, never stored)
   if (!S().user) return; const day = L.today();
-  for (const b of BADGES) { if (b.kind === 'rank' || S().badges[b.id]) continue; if (b.window && !(day >= b.window[0] && day <= b.window[1])) continue;
+  for (const b of allBadges()) { if (b.kind === 'rank' || S().badges[b.id]) continue; if (b.window && !(day >= b.window[0] && day <= b.window[1])) continue; if (b.win && !(nowMs() >= b.win[0] && nowMs() < b.win[1])) continue;
     if (b.test(S(), day)) { store.award(b.id); toast(`🏅 New badge: ${b.icon} ${b.name}!`); } }
 }
 function render() {
@@ -31,6 +33,8 @@ function render() {
   $('#b-goals').textContent = `${done}/${all}`; $('#b-shop').textContent = L.exchangeOpen() ? '' : '🔒';
   $('#b-cal').textContent = u && Array.from({ length: L.today() }, (_, i) => i + 1).some(d => !S().doors.includes(d)) ? '!' : '';
   if (L.buildDone() && S().buildLocked == null) store.lockBuild(Math.round(L.poolRaw() * C.split.build));   // freeze the Build bracket
+  $('#banner').innerHTML = events.active().map(e => `<button data-open="events" class="evchip">${e.icon || '🎉'} <b>${e.title}</b> · ends in <span data-until="${e.e}"></span></button>`).join('');
+  $('[data-open=admin]').hidden = !isAdmin();
   checkBadges(); loadBoards(); refresh();
 }
 ctx.afterChange = render;
@@ -41,6 +45,7 @@ function tick() {
   GAMES.forEach(g => { const c = uid ? cooldownLeft(g, uid) : 0; if (!c) ready++; const el = document.querySelector(`[data-cd=${g.id}]`);
     if (el) { el.textContent = c ? 'Ready in ' + c + 's' : '▶ Play now'; el.closest('button').disabled = !!c; } });
   $('#b-games').textContent = uid ? `${ready} ready` : '';
+  document.querySelectorAll('[data-until]').forEach(el => el.textContent = left(+el.dataset.until - nowMs()));
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b) open(b.dataset.open); });
 $('#profile').onclick = () => (S().user ? open('profile') : ctx.login());
@@ -49,4 +54,6 @@ ctx.radio.onChange(() => { const r = ctx.radio; $('#radiochip').hidden = !r.on; 
 snow(); bind(); setup(L);
 try { await store.init(); }
 catch (e) { fail(new Error('Firebase failed (' + e.message + ') – running in demo mode.')); store = createStore(true); await store.init(); }
-ctx.store = store; store.onChange(render); render(); tick(); setInterval(tick, 1000);
+ctx.store = store; applyLive(await store.loadLive());
+if (C.firebase) setInterval(async () => { applyLive(await store.loadLive()); render(); }, 300000);   // admin changes arrive within 5 min (1 read)
+store.onChange(render); render(); tick(); setInterval(tick, 1000);
