@@ -58,3 +58,13 @@ dialog{background:var(--card);color:#eef;border:3px solid #5865f2;border-radius:
 .badge.got{filter:none;opacity:1;border-color:var(--gold);background:#2a2610}.badge.live{border-color:#4ade80;box-shadow:0 0 14px #4ade8066}.badge.miss{opacity:.35}
 .bicons{font-size:1.4rem;display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}details.card2 summary{cursor:pointer;font-weight:800}
 .player{display:flex;gap:16px;align-items:center;margin-bottom:10px}.np{font-size:1.2rem;display:block;margin-bottom:8px}input[type=range]{padding:0;width:160px;vertical-align:middle}
+/* events, admin, share */
+#banner{position:relative;z-index:3;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 10px}#banner:not(:empty){padding-top:10px}
+.evchip{background:linear-gradient(#7a3fb8,#5a2a8c);border-bottom-color:#3a1a5c;font-size:.85rem}
+.ev{display:flex;gap:14px;align-items:center;background:#112038;border:2px solid #2d4b7a;border-radius:14px;padding:12px;margin-bottom:10px}.ev.act{border-color:#4ade80}.ev.old{opacity:.5}
+.ev>i{font-style:normal;font-size:2.2rem}.ev small,.ev em{display:block;color:#9fb4d3;font-style:normal;font-size:.8rem}.ev em{color:var(--gold);font-weight:800}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0}.form label,.blk{display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:#9fb4d3;font-weight:700}.blk{margin:8px 0}
+textarea,select{font:inherit;padding:8px;border-radius:10px;border:2px solid #3b557f;background:#0e1b33;color:#fff;width:100%}textarea.mono{font-family:ui-monospace,monospace;font-size:.78rem}
+.evrow{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2d4b7a}.evrow small{display:block;color:#9fb4d3}
+.calgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}.calgrid input{width:100%;margin-top:2px;padding:5px}.tabs.wrap{flex-wrap:wrap}
+.sharepic{width:100%;border-radius:12px;border:3px solid var(--gold);margin-bottom:12px}#dock .adm{background:linear-gradient(#5b6df0,#4150c9)}

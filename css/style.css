@@ -27,7 +27,8 @@ input{font:inherit;padding:8px 10px;border-radius:10px;border:2px solid #3b557f;
 #items .locked{filter:brightness(0);opacity:.14;animation:none!important}
 #items .pop{animation:pop .9s}@keyframes pop{0%{transform:translate(-50%,-100%) scale(.1)}60%{transform:translate(-50%,-100%) scale(1.25)}100%{transform:translate(-50%,-100%) scale(1)}}
 #items .train:not(.locked){animation:ride 24s linear infinite}
-@keyframes ride{0%{left:12%;transform:translate(-50%,-100%)}48%{left:84%;transform:translate(-50%,-100%)}50%{left:84%;transform:translate(-50%,-100%) scaleX(-1)}98%{left:12%;transform:translate(-50%,-100%) scaleX(-1)}100%{left:12%;transform:translate(-50%,-100%)}}
+/* train art has the engine on the LEFT (faces left): mirror it while driving right */
+@keyframes ride{0%{left:12%;transform:translate(-50%,-100%) scaleX(-1)}48%{left:84%;transform:translate(-50%,-100%) scaleX(-1)}50%{left:84%;transform:translate(-50%,-100%)}98%{left:12%;transform:translate(-50%,-100%)}100%{left:12%;transform:translate(-50%,-100%) scaleX(-1)}}
 #hint{position:absolute;left:66%;top:20%;transform:translateX(-50%);background:#000a;padding:6px 14px;border-radius:20px;font-size:.85rem;text-align:center;max-width:40%;transition:opacity 1s}
 .party .bg{animation:hue 8s linear infinite}@keyframes hue{to{filter:hue-rotate(360deg)}}
 .spark{position:absolute;pointer-events:none;animation:spark 1.1s forwards}@keyframes spark{to{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
@@ -71,3 +72,4 @@ button,input{touch-action:manipulation}input{font-size:16px}
  .cal{grid-template-columns:repeat(4,1fr);gap:8px}.door{font-size:1.5rem}.strip{font-size:.85rem}.pool{font-size:2.3rem}.tier{flex-wrap:wrap}.badges{grid-template-columns:1fr 1fr}.player{flex-direction:column;text-align:center}
  .lb .v{font-size:.85rem}.tabs button{flex:1}.split .seg{font-size:.7rem}
 }
+#dock [hidden]{display:none!important}
