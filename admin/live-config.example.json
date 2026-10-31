@@ -1,0 +1,14 @@
+{
+  "basePool": 500,
+  "gemRate": 10,
+  "split": { "build": 0.7, "gems": 0.3 },
+  "tiers": [ { "at": 2000, "bonus": 250 }, { "at": 5000, "bonus": 500 } ],
+  "goals": { "tree": { "levels": [400, 1200, 3000] }, "wreath": { "enabled": true, "name": "Christmas Wreath" } },
+  "calendar": { "default": [5, 15], "days": { "24": [50, 100] } },
+  "events": [
+    { "id": "dbl1", "type": "xpoints", "icon": "✨", "title": "Double Snowflake Weekend", "desc": "All games give 2x!", "start": "2026-12-05T00:00:00Z", "end": "2026-12-07T00:00:00Z", "params": { "mult": 2 } },
+    { "id": "sale", "type": "gemrate", "icon": "💎", "title": "Gem Sale", "desc": "Cheaper exchange", "start": "2026-12-10T00:00:00Z", "end": "2026-12-11T00:00:00Z", "params": { "rate": 6 } },
+    { "id": "crown", "type": "shop", "icon": "👑", "title": "Exclusive Crown", "desc": "Only buyable now", "start": "2026-12-12T00:00:00Z", "end": "2026-12-14T00:00:00Z", "params": { "item": { "id": "crown", "name": "Snowflake Crown", "icon": "👑", "price": 30, "type": "own", "title": "👑 Snow King", "desc": "Event exclusive" } } },
+    { "id": "gen", "type": "badge", "icon": "🎖️", "title": "Generous Week", "desc": "Donate 200 ❄ this week", "start": "2026-12-15T00:00:00Z", "end": "2026-12-22T00:00:00Z", "params": { "metric": "donated", "min": 200 } }
+  ]
+}
