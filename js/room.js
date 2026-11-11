@@ -37,7 +37,7 @@ export function updateRoom(L, S) {
 // ---------- interactions ----------
 function bonus(id, lo, hi, mins = 10) {          // small snowflake gift with a per-user cooldown
   const u = ctx.store.state.user; if (!u) return 0; const k = `xmas_ia_${u.id}_${id}`; if (Date.now() - (+localStorage[k] || 0) < mins * 60000) return 0;
-  localStorage[k] = Date.now(); const n = lo + Math.floor(Math.random() * (hi - lo + 1)); ctx.store.addPoints(n); return n;
+  localStorage[k] = Date.now(); return ctx.store.earn(lo + Math.floor(Math.random() * (hi - lo + 1)));   // counts towards the daily cap
 }
 const ACT = {
   tree(el) { anim(el, 'a-shake'); particles(el, ['🔴', '🟡', '✨', '❄️'], 8); beep(784, 140); const n = bonus('tree', 1, 3); bubble(el, n ? `🎁 A gift fell out: +${n} ❄` : '🎄 Ding ding! (try again later for a gift)'); },

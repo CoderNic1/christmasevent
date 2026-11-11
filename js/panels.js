@@ -1,7 +1,7 @@
 // All overlay panels (games, goals, advent, leaderboards, prize, gems & shop, badges, profile, radio) + their click actions.
 import { CONFIG as C } from './config.js';
 import { reward, range } from './logic.js';
-import { events, shopItems, doorBonus, xmult, titleOf, gemRate, left, nowMs } from './remote.js';
+import { events, shopItems, doorBonus, xmult, ownedTitles, gemRate, dailyCap, left, nowMs } from './remote.js';
 import { adminHtml, adminAct, adminChange, adminOpen } from './admin.js';
 import { makeCard } from './share.js';
 import { $, f, toast, openPanel, closePanel, body, current, setGuard } from './ui.js';
@@ -28,7 +28,7 @@ export function refresh() {           // re-render the open panel (never while t
   const id = current(); if (!id || cancel || id === 'board' || id === 'game' || document.activeElement?.matches('input')) return;
   if (PANELS[id]) body().innerHTML = PANELS[id][1]();
 }
-const strip = () => `<div class="strip"><span>❄ Points: <b>${f(S().pts)}</b></span><span>💎 Gems: <b>${f(S().gems)}</b></span><span>Donated: <b>${f(S().donated)}</b></span></div>`;
+const strip = () => `<div class="strip"><span>❄ Points: <b>${f(S().pts)}</b></span><span title="Hard cap on what you can earn per day (UTC)">⚡ Today: <b>${f(dailyCap() - ctx.store.capLeft())}/${f(dailyCap())}</b></span><span>💎 Gems: <b>${f(S().gems)}</b></span><span>Donated: <b>${f(S().donated)}</b></span></div>`;
 
 // ---------- games ----------
 function gamesHtml() {
@@ -44,8 +44,8 @@ function play(id) {
   cancel = startGame(g, $('#stage'), S().user.id, (pts, score, extra) => {
     cancel = null; setGuard(null); const em = xmult(g.id), dbl = S().inv.x2 > 0 && pts > 0; pts = Math.floor(pts * em); if (dbl) { pts *= 2; ctx.store.spend('x2'); }
     if (g.id === 'memory' && extra?.won && extra.left >= 20) ctx.store.count('memwin20');
-    ctx.store.recordPlay(g.id, score, pts); ctx.afterChange();
-    $('#stage').innerHTML = `<div class="result"><h3>${pts ? 'Ho ho ho! 🎅' : 'Oh no…'}</h3><div class="pts">+${pts} ❄</div><p class="muted">Score ${score}${dbl ? ' · ✨ doubled!' : ''}${em > 1 ? ' · 🎉 event ×' + em : ''}. Donate your points to a goal!</p>
+    const got = ctx.store.recordPlay(g.id, score, pts); ctx.afterChange();
+    $('#stage').innerHTML = `<div class="result"><h3>${got ? 'Ho ho ho! 🎅' : pts ? 'Daily cap reached 🌙' : 'Oh no…'}</h3><div class="pts">+${got} ❄</div><p class="muted">Score ${score}${dbl ? ' · ✨ doubled!' : ''}${em > 1 ? ' · 🎉 event ×' + em : ''}${got < pts ? ` · ⚡ daily cap reached (+${got} of ${pts} counted) – resets 00:00 UTC` : ''}. Donate your points to a goal!</p>
     <div class="acts" style="justify-content:center"><button data-act="back">🎮 More games</button><button class="ghost" data-act="tog">🎁 Donate points</button></div></div>`;
   });
   $('#stage').addEventListener('click', e => { if (e.target.closest('[data-act=quit]') && closePanel()) open('games'); });
@@ -75,7 +75,7 @@ function calHtml() {
   return `<p class="muted">A new door opens every day in December – each one holds a surprise amount of ❄${doorBonus() ? ` (🎉 +${doorBonus()} event bonus!)` : ''}</p><div class="cal">` + Array.from({ length: 24 }, (_, i) => i + 1).map(n => { const o = S().doors.includes(n), av = n <= t, [lo, hi] = range(n);
     return `<button class="door ${o ? 'open' : av ? 'today' : 'lock'}" data-act="door" data-id="${n}" ${!av || o ? 'disabled' : ''}>${o ? '🎁' : av ? n : '🔒'}<small>${o ? '+' + (c['door' + n] ?? '?') + ' ❄' : av ? (lo === hi ? '' : lo + '–' + hi + ' ❄') : 'Dec ' + n}</small></button>`; }).join('') + '</div>';
 }
-function door(n) { if (!S().user) return ctx.login(); const r = reward(n) + doorBonus(); ctx.store.openDoor(n, r); ctx.store.count('door' + n, r); toast(`🎄 Door ${n}: +${r} ❄!`); ctx.afterChange(); refresh(); }
+function door(n) { if (!S().user) return ctx.login(); const r = reward(n) + doorBonus(), g = ctx.store.openDoor(n, r); ctx.store.count('door' + n, g); toast(g < r ? `🎄 Door ${n}: +${g} ❄ (daily cap reached)` : `🎄 Door ${n}: +${r} ❄!`); ctx.afterChange(); refresh(); }
 
 // ---------- leaderboards (two brackets, reward share shown) ----------
 const splitBar = br => `<div class="split"><div class="seg b" style="flex:${Math.max(br.B, 1)}">🏗 Build<b>${f(br.B)} ${cur}</b><small>${br.locked ? '🔒 frozen' : 'live'}</small></div><div class="seg g" style="flex:${Math.max(br.G, 1)}">💎 Gems<b>${f(br.G)} ${cur}</b><small>grows with donations</small></div></div>`;
@@ -138,16 +138,18 @@ function badgesHtml() {
 }
 
 // ---------- profile ----------
+const tagList = () => ['', ...new Set([...ownedTitles(S().inv), ...allBadges().filter(b => (b.kind === 'rank' ? holds(b, ctx.boards, S().user?.name) : S().badges[b.id])).map(b => `${b.icon} ${b.name}`)])];   // everything obtained can be a nametag
 function profileHtml() {
   const u = S().user, st = S().stats, plays = Object.values(st.plays).reduce((a, b) => a + b, 0), l = L();
   const icons = allBadges().filter(b => (b.kind === 'rank' ? holds(b, ctx.boards, u.name) : S().badges[b.id])).map(b => `<span title="${b.name}">${b.icon}</span>`).join('') || '<span class="muted">none yet</span>';
-  return `<div class="pf">${avatar(u, 1)}<div><h3 style="margin:0;font-size:1.6rem">${u.name}</h3><span class="muted">${titleOf(S().inv) ? titleOf(S().inv) + ' · ' : ''}Discord · ${short(u.id)}</span><div class="bicons">${icons}</div></div></div>
+  return `<div class="pf">${avatar(u, 1)}<div><h3 style="margin:0;font-size:1.6rem">${u.name}</h3><span class="muted">${S().tag ? S().tag + ' · ' : ''}Discord · ${short(u.id)}</span><div class="bicons">${icons}</div></div></div>
   <div class="stats"><div class="stat"><b>${f(S().pts)}</b>❄ Points</div><div class="stat"><b>${f(S().gems)}</b>💎 Gems</div><div class="stat"><b>${f(S().donated)}</b>Donated ❄</div><div class="stat"><b>${f(S().gemDonated)}</b>Donated 💎</div>
-  <div class="stat"><b>${(l.shareB() * 100).toFixed(1)}%</b>Build share</div><div class="stat"><b>${(l.shareG() * 100).toFixed(1)}%</b>Gem share</div><div class="stat"><b>${f(st.earned)}</b>Earned in games</div><div class="stat"><b>${plays}</b>Rounds</div><div class="stat"><b>${S().doors.length}/24</b>Doors</div></div>
+  <div class="stat"><b>${(l.shareB() * 100).toFixed(1)}%</b>Build share</div><div class="stat"><b>${(l.shareG() * 100).toFixed(1)}%</b>Gem share</div><div class="stat"><b>${f(st.earned)}</b>Earned in games</div><div class="stat"><b>${plays}</b>Rounds</div><div class="stat"><b>${S().doors.length}/24</b>Doors</div><div class="stat"><b>${f(dailyCap() - ctx.store.capLeft())}/${f(dailyCap())}</b>⚡ Earned today</div></div>
+  <h3>Nametag</h3><p class="muted">Shown next to your name on the leaderboards. Choose any title you have obtained (shop, events, badges):</p><div class="tags">${tagList().map((t, i) => `<button class="tagbtn ${S().tag === t ? 'on' : ''}" data-act="tag" data-id="${i}">${t || '— none —'}</button>`).join('')}</div>
   <h3>Best scores</h3><div class="stats">` + GAMES.map(g => `<div class="stat"><img src="${g.img}" height="30" alt=""><br>${g.name}<b>${st.best[g.id] || '–'}</b></div>`).join('') + `</div>
   <p class="muted">Wallet: ${S().wallet ? short(S().wallet) : 'not set yet (Prize & Wallet)'}</p>
-  <div class="acts"><button data-act="open" data-id="share">📤 Share stats</button><button class="ghost" data-act="open" data-id="badges">🏅 Badges</button><button class="ghost" data-act="logout">🚪 Log out</button><button class="danger" data-act="delete">🗑 Delete account</button></div>` +
-  (ctx.store.cheat ? `<details class="card2" open><summary>🧪 Test tools (demo mode only)</summary><div class="acts"><button class="ghost" data-act="cheat" data-id="pts">+500 ❄</button><button class="ghost" data-act="cheat" data-id="build">Complete all except Nutcracker</button><button class="ghost" data-act="cheat" data-id="all">Complete everything</button><button class="ghost" data-act="cheat" data-id="gems">+50 💎</button><button class="danger" data-act="cheat" data-id="reset">Reset demo data</button></div></details>` : '');
+  <div class="acts"><button data-act="open" data-id="share">📤 Share stats</button><button class="ghost" data-act="open" data-id="badges">🏅 Badges</button><button class="ghost" data-act="copyid">🆔 Copy my user ID</button><button class="ghost" data-act="logout">🚪 Log out</button><button class="danger" data-act="delete">🗑 Delete account</button></div>` +
+  (ctx.store.cheat ? `<details class="card2" open><summary>🧪 Test tools (demo mode only)</summary><div class="acts"><button class="ghost" data-act="cheat" data-id="pts">+500 ❄</button><button class="ghost" data-act="cheat" data-id="build">Complete all except Nutcracker</button><button class="ghost" data-act="cheat" data-id="all">Complete everything</button><button class="ghost" data-act="cheat" data-id="gems">+50 💎</button><button class="ghost" data-act="cheat" data-id="cap">Fill daily cap</button><button class="ghost" data-act="cheat" data-id="uncap">Reset daily cap</button><button class="danger" data-act="cheat" data-id="reset">Reset demo data</button></div></details>` : '');
 }
 
 // ---------- events ----------
@@ -188,7 +190,7 @@ export function bind() {
     if (gemAct[a]) { if (need()) { gemAct[a](id); ctx.afterChange(); refresh(); } return; }
     if (radioAct[a]) { radioAct[a](id); ctx.afterChange(); refresh(); return; }
     ({ close: () => closePanel(), play: () => play(id), back: () => open('games'), tog: () => open('goals'), open: () => open(id), donate: () => donate(id), max: () => donate(id, true), door: () => door(+id), wallet: saveWallet,
-      tab: () => { boardTab = id; boardFill(); }, cheat: () => { ctx.store.cheat(id); ctx.afterChange(); refresh(); },
+      tab: () => { boardTab = id; boardFill(); }, tag: () => { ctx.store.setTag(tagList()[+id] || ''); toast('🏷 Nametag updated'); ctx.afterChange(); refresh(); }, copyid: () => navigator.clipboard?.writeText(S().user.id).then(() => toast('🆔 User ID copied')), cheat: () => { ctx.store.cheat(id); ctx.afterChange(); refresh(); },
       logout: () => { if (closePanel()) { ctx.store.logout(); ctx.afterChange(); toast('Logged out – see you soon! 🎅'); } },
       delete: () => { if (confirm('Delete your account and its data? This cannot be undone.\n(Points you already donated stay in the community goals.)')) { closePanel(); Promise.resolve(ctx.store.deleteAccount()).then(() => { ctx.afterChange(); toast('Account deleted'); }); } } })[a]?.();
   });

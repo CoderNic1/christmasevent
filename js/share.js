@@ -3,7 +3,6 @@ import { CONFIG as C } from './config.js';
 import { ctx } from './ctx.js';
 import { STARTERS } from './room.js';
 import { BADGES, rankOf, holds } from './badges.js';
-import { titleOf } from './remote.js';
 const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
 const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
 const f = n => Math.floor(n).toLocaleString();
@@ -24,7 +23,7 @@ export async function makeCard() {
   const x0 = 770; g.textBaseline = 'top'; g.fillStyle = '#fff'; g.font = `700 46px ${head}`; g.fillText('🎄 Community Christmas', 28, 28);
   g.font = `700 22px ${body}`; g.fillStyle = '#f5c542'; const days = Math.max(0, Math.ceil((new Date(C.eventEnd) - Date.now()) / 864e5)); g.fillText(days ? `${days} days until Christmas · help us build the room!` : 'Merry Christmas! 🎅', 30, 78);
   g.fillStyle = u.color || '#5865f2'; g.beginPath(); g.arc(x0 + 34, 148, 34, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `800 34px ${body}`; g.textAlign = 'center'; g.fillText(u.name[0].toUpperCase(), x0 + 34, 130); g.textAlign = 'left';
-  g.font = `800 34px ${body}`; g.fillText(u.name.slice(0, 16), x0 + 84, 118); g.font = `600 20px ${body}`; g.fillStyle = '#9fb4d3'; g.fillText(titleOf(S.inv) || 'Christmas helper', x0 + 84, 160);
+  g.font = `800 34px ${body}`; g.fillText(u.name.slice(0, 16), x0 + 84, 118); g.font = `600 20px ${body}`; g.fillStyle = '#9fb4d3'; g.fillText(S.tag || 'Christmas helper', x0 + 84, 160);
   const rb = rankOf(ctx.boards, 'build', u.name), rg = rankOf(ctx.boards, 'gems', u.name), lv = C.goals.reduce((a, q) => a + L.lvl(q), 0), mx = C.goals.reduce((a, q) => a + L.max(q), 0);
   const stats = [['❄ Donated', f(S.donated)], ['🏗 Build rank', rb ? '#' + rb : '–'], ['📈 Build share', (L.shareB() * 100).toFixed(1) + '%'], ['💎 Gems donated', f(S.gemDonated)], ['💠 Gem rank', rg ? '#' + rg : '–'], ['🎁 Room upgrades', `${lv}/${mx}`]];
   stats.forEach(([k, v], i) => { const x = x0 + (i % 2) * 205, y = 215 + Math.floor(i / 2) * 100; g.fillStyle = '#16294a'; rr(g, x, y, 195, 88, 14); g.fill(); g.fillStyle = '#9fb4d3'; g.font = `700 17px ${body}`; g.fillText(k, x + 14, y + 12); g.fillStyle = '#f5c542'; g.font = `800 34px ${body}`; g.fillText(v, x + 14, y + 40); });
