@@ -1,4 +1,6 @@
 # Community Christmas
+
+👉 **Going live with Firebase/Discord? Read `SETUP.md`.** Add `?demo=1` to the URL to run the local demo. The hard daily earning cap, nametags and admin console are described below and in SETUP.md.
 Run locally: `python3 -m http.server` in this folder, open http://localhost:8000 (ES modules need a server).
 Test advent doors with `?day=12`. Demo mode stores everything in localStorage.
 
