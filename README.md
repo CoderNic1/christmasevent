@@ -1,6 +1,6 @@
 # Community Christmas
 
-👉 **Going live with Firebase/Discord? Read `SETUP.md`.** Add `?demo=1` to the URL to run the local demo. The hard daily earning cap, nametags and admin console are described below and in SETUP.md.
+👉 **Going live with Firebase + wallet login? Read `SETUP.md`.** Add `?demo=1` to the URL to run the local demo. The hard daily earning cap, nametags and admin console are described below and in SETUP.md.
 Run locally: `python3 -m http.server` in this folder, open http://localhost:8000 (ES modules need a server).
 Test advent doors with `?day=12`. Demo mode stores everything in localStorage.
 
@@ -9,10 +9,10 @@ Test advent doors with `?day=12`. Demo mode stores everything in localStorage.
 Deploy from branch `main` / root → open `https://<user>.github.io/<repo>/`. **Vercel:** import the repo, framework "Other", no build command.
 All paths are relative, so sub-paths work. If something fails, a red error banner shows at the top of the page.
 
-## Discord login status
-Right now login is a **placeholder** (`js/discord.js`): a fake "Authorize" dialog where any username becomes a separate test account
-(stored in localStorage, with a Log out button). Real Discord = set `CONFIG.firebase` + `CONFIG.discordAuthUrl` (Cloud Functions below);
-`discord.js` is then unused and nothing else changes.
+## Login: wallet (MetaMask / Crypto.com) + whitelist
+Players connect a wallet (`js/wallet.js`, `js/login.js`), sign a free message, and the `walletLogin` Cloud Function lets in only whitelisted wallets (admins manage the list in **Admin ▸ Whitelist**).
+After the first login they choose a unique username once (the whitelist entry's Discord name is suggested). In demo mode (`?demo=1`) there is no server: the whitelist lives in localStorage
+(seeded with `0x1111…1111`, `0x2222…2222`, `0x3333…3333`; use `?demo=1&admin=1` + a whitelisted address to try the admin tab). See `SETUP.md` step 6.
 
 ## Admin: tune the game without touching code
 Everything in `config.js` is only the *default*. One Firestore document, `config/live`, is merged over it at runtime (1 read every 5 min per player).
@@ -37,21 +37,11 @@ Everything in `config.js` is only the *default*. One Firestore document, `config
 ## Files
 - `index.html` · `css/style.css` (theme, room, mobile) · `css/panels.css` (overlay panels, games, shop, badges)
 - `js/config.js` · `js/main.js` wiring · `js/panels.js` all panels · `js/games.js` engine + 5 games · `js/room.js` room + interactions · `js/logic.js` pool/bracket maths
-- `js/store.js` Demo + Firebase · `js/badges.js` · `js/radio.js` · `js/ui.js` · `js/ctx.js` · `js/discord.js` placeholder login
+- `js/store.js` Demo + Firebase · `js/badges.js` · `js/radio.js` · `js/ui.js` · `js/ctx.js` · `js/wallet.js` wallet access (read-only) · `js/login.js` login dialog · `js/names.js` username rules
 - Demo mode has 🧪 test tools in your profile (+❄, complete goals, +💎, reset) so you can try every phase.
 
-## Going live (Firebase + Discord)
-1. Create a Firebase project, enable Firestore + Auth, paste the web config in `config.js`.
-2. Discord: Firebase has no native Discord provider. Make 2 Cloud Functions: `/start` redirects to Discord OAuth;
-   `/callback` exchanges the code, reads the Discord user, calls `admin.auth().createCustomToken('discord:'+id,{})`
-   (set displayName), then redirects to `https://yoursite/#token=...`.
-3. Data: `users/{uid}` {name, pts, donated, gems, gemDonated, wallet, doors[], inv{}, badges{}, stats{}} · `community/state` {goals:{tree:n,...}, cgems:n, buildLocked:n|null}.
-   `buildLocked` is written once when the Nutcracker completes – rule: allow only while it is unset (or better: set it from a Cloud Function).
-4. Cost control: clients write at most once/min (batched increments), read community doc once/min, leaderboard cached 5 min.
-   Scale-up: have a Cloud Function keep `community/leaderboard` (top 50) so clients read 1 doc.
-5. Security rules: users may only write their own doc; `donated` may only increase and never exceed `pts` spent;
-   `community/state` goal increments only allowed in the same batch as the matching user `donated` increment.
-   Best: move game scoring to a callable Function (server validates round time/score) — client scoring is cheatable.
+## Going live (Firebase + wallet login)
+Follow `SETUP.md` (Firestore → Auth → rules → admin → `walletLogin` function). Functions code: `functions/index.js` (Firebase glue) and `functions/login-core.js` (signature checks, unit-tested).
 
 ## Payout
 At end: export `users` (wallet, donated). Payout = pool × donated / totalDonated, where
