@@ -42,7 +42,7 @@
 .tiers{display:grid;gap:10px;margin:14px 0}.tier{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#112038}.tier.on{background:#3a3210;border:2px solid var(--gold)}.tier .bar{flex:1}
 .pf{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:16px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 .stat{background:#112038;border-radius:12px;padding:12px;text-align:center}.stat b{display:block;font-size:1.5rem;color:var(--gold)}.acts{display:flex;gap:10px;flex-wrap:wrap}
-dialog{background:var(--card);color:#eef;border:3px solid #5865f2;border-radius:16px;max-width:380px}dialog::backdrop{background:#000a}dialog h3{margin-top:0}dialog small{color:#f5c542}
+dialog{background:var(--card);color:#eef;border:3px solid var(--gold);border-radius:16px;max-width:440px;width:calc(100% - 24px)}dialog::backdrop{background:#000a}dialog h3{margin-top:0}dialog small{color:#f5c542}
 #toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;display:grid;gap:8px;justify-items:center}
 .toast{background:#102a1c;border:2px solid #4ade80;padding:9px 18px;border-radius:99px;font-weight:800;animation:rise .25s;box-shadow:0 6px 20px #000a}.toast.bad{background:#2a1015;border-color:#ff6b7a}
 /* levels, split bar, tabs, shop, badges, radio */
@@ -72,3 +72,10 @@ textarea,select{font:inherit;padding:8px;border-radius:10px;border:2px solid #3b
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tagbtn{background:#2c4166;border-bottom-color:#1a2a46;font-size:.85rem}.tagbtn.on{background:linear-gradient(#2e9d5f,#1e6a42);border-bottom-color:#0f3f26}
 .mini{padding:2px 8px;font-size:.75rem;border-bottom-width:2px}.help{background:#0e1b33;border:2px dashed #3b557f;border-radius:12px;padding:10px 14px;margin:8px 0;font-size:.85rem}.help h4{margin:6px 0 2px}.help table{width:100%;border-collapse:collapse;margin:6px 0}.help td,.help th{border-bottom:1px solid #2d4b7a;padding:4px 6px;text-align:left;vertical-align:top}.help hr{border:0;border-top:2px solid #2d4b7a;margin:10px 0}
 .chk{display:flex;flex-wrap:wrap;gap:4px 10px;font-weight:600}.chk label{flex-direction:row;align-items:center;gap:4px;color:#eef}
+
+/* wallet login dialog */
+.wd h3{margin:0 0 6px}.wlist{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.wbtn{display:grid;grid-template-columns:34px 1fr;grid-template-areas:"i n" "i s";align-items:center;column-gap:10px;text-align:left;background:#2c4166;border-bottom-color:#1a2a46;padding:8px 12px}
+.wbtn img,.wbtn .wi{grid-area:i;width:28px;height:28px;font-size:1.4rem;line-height:28px;text-align:center;border-radius:6px}.wbtn b{grid-area:n}.wbtn small{grid-area:s;color:#9fb4d3;font-weight:600}
+.wd code{background:#0e1b33;padding:1px 6px;border-radius:6px;word-break:break-all}.wd a{color:var(--gold)}
+.spin{display:inline-block;width:14px;height:14px;border:3px solid #3b557f;border-top-color:var(--gold);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}@keyframes sp{to{transform:rotate(360deg)}}
