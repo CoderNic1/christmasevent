@@ -2,16 +2,16 @@
 import { CONFIG as C } from './config.js';
 import { reward, range } from './logic.js';
 import { events, shopItems, doorBonus, xmult, ownedTitles, gemRate, dailyCap, left, nowMs } from './remote.js';
-import { adminHtml, adminAct, adminChange, adminOpen } from './admin.js';
+import { adminHtml, adminAct, adminChange, adminInput, adminOpen } from './admin.js';
 import { makeCard } from './share.js';
-import { $, f, toast, openPanel, closePanel, body, current, setGuard } from './ui.js';
+import { $, f, toast, openPanel, closePanel, body, current, setGuard, esc } from './ui.js';
 import { GAMES, startGame, cooldownLeft, resetCooldowns } from './games.js';
 import { BADGES, allBadges, rankOf, holds } from './badges.js';
 import { SONGS } from './radio.js';
 import { ctx } from './ctx.js';
 const S = () => ctx.store.state, short = a => a ? a.slice(0, 6) + '…' + a.slice(-4) : '—', cur = C.currency, L = () => ctx.L;
 let cancel = null, boardTab = 'build';
-const avatar = (u, big) => `<span class="av ${big ? 'lg' : ''} ${S().inv.frame ? 'gold' : ''}" style="background:${u.color || '#5865f2'}">${u.name[0].toUpperCase()}</span>`;
+const avatar = (u, big) => `<span class="av ${big ? 'lg' : ''} ${S().inv.frame ? 'gold' : ''}" style="background:${u.color || '#c9892b'}">${esc(u.name[0].toUpperCase())}</span>`;
 export { avatar };
 
 const PANELS = {
@@ -25,7 +25,7 @@ export function open(id) {
   openPanel(id, PANELS[id][0], PANELS[id][1]()); if (id === 'board') boardFill(); if (id === 'share') shareFill();
 }
 export function refresh() {           // re-render the open panel (never while typing or inside a game)
-  const id = current(); if (!id || cancel || id === 'board' || id === 'game' || document.activeElement?.matches('input')) return;
+  const id = current(); if (!id || cancel || id === 'board' || id === 'game' || document.activeElement?.matches('input,textarea,select')) return;
   if (PANELS[id]) body().innerHTML = PANELS[id][1]();
 }
 const strip = () => `<div class="strip"><span>❄ Points: <b>${f(S().pts)}</b></span><span title="Hard cap on what you can earn per day (UTC)">⚡ Today: <b>${f(dailyCap() - ctx.store.capLeft())}/${f(dailyCap())}</b></span><span>💎 Gems: <b>${f(S().gems)}</b></span><span>Donated: <b>${f(S().donated)}</b></span></div>`;
@@ -82,7 +82,7 @@ const splitBar = br => `<div class="split"><div class="seg b" style="flex:${Math
 async function boardFill() {
   const kind = boardTab, rows = await ctx.store.board(kind); if (current() !== 'board') return; ctx.boards[kind] = rows;
   const l = L(), br = l.brackets(), amt = kind === 'build' ? br.B : br.G, total = kind === 'build' ? l.totalBuilt() : S().cgems, mine = kind === 'build' ? S().donated : S().gemDonated, me = S().user?.name, unit = kind === 'build' ? '❄' : '💎';
-  const row = (n, v, t, i, isMe) => `<li class="${isMe ? 'me' : ''}"><span class="m">${['🥇', '🥈', '🥉'][i] || (i >= 0 ? i + 1 : '·')}</span><span class="n">${n}${t ? `<small>${t}</small>` : ''}</span><span class="v">${f(v)} ${unit}<small>${total ? (v / total * 100).toFixed(1) : 0}% · ≈ ${(total ? v / total * amt : 0).toFixed(2)} ${cur}</small></span></li>`;
+  const row = (n, v, t, i, isMe) => `<li class="${isMe ? 'me' : ''}"><span class="m">${['🥇', '🥈', '🥉'][i] || (i >= 0 ? i + 1 : '·')}</span><span class="n">${esc(n)}${t ? `<small>${esc(t)}</small>` : ''}</span><span class="v">${f(v)} ${unit}<small>${total ? (v / total * 100).toFixed(1) : 0}% · ≈ ${(total ? v / total * amt : 0).toFixed(2)} ${cur}</small></span></li>`;
   const note = kind === 'build' ? (br.locked ? '🔒 Building is complete – this bracket is frozen. Final standings!' : 'Ranked by ❄ donated to goals. This bracket freezes when the Nutcracker is done.')
     : (l.exchangeOpen() ? 'Ranked by 💎 donated to the Star Fund. This bracket keeps growing with every donation!' : '🔒 Opens after the Nutcracker: exchange ❄ for 💎 and compete here – the prize pool keeps growing!');
   body().innerHTML = splitBar(br) + `<div class="tabs"><button class="${kind === 'build' ? '' : 'ghost'}" data-act="tab" data-id="build">🏗 Build</button><button class="${kind === 'gems' ? '' : 'ghost'}" data-act="tab" data-id="gems">💎 Gems</button></div>
@@ -99,7 +99,7 @@ function prizeHtml() {
     return `<div class="tier ${on ? 'on' : ''}"><span>${on ? '✅' : '🔒'}</span><b>${t.at ? f(t.at) + ' pts donated' : 'Base pool'}</b>${t.at ? `<div class="bar"><i style="width:${Math.min(100, eq / t.at * 100)}%"></i></div>` : '<span style="flex:1"></span>'}<b>${t.at ? '+' : ''}${f(t.bonus)} ${cur}</b></div>`; }).join('') +
   `</div><p class="muted">Total donated: <b>${f(eq)}</b> pts (❄ to goals + 💎 to the Star Fund × ${C.gemRate}). Tiers add to the pool automatically.</p>
   <div class="strip"><span>🏗 Build share: <b>${(l.shareB() * 100).toFixed(2)}%</b> ≈ <b>${sb.toFixed(2)} ${cur}</b></span><span>💎 Gem share: <b>${(l.shareG() * 100).toFixed(2)}%</b> ≈ <b>${sg.toFixed(2)} ${cur}</b></span></div>
-  <h3>Payout wallet (EVM address)</h3><div class="don"><input id="wallet" style="flex:1;min-width:200px" placeholder="0x…" value="${S().wallet || ''}"><button data-act="wallet">Save wallet</button></div><p class="muted">Use an address you control (Ethereum, Polygon, Base, BNB… all EVM). Never share your seed phrase.</p>`;
+  <h3>Payout wallet (EVM address)</h3><div class="don"><input id="wallet" style="flex:1;min-width:200px" placeholder="0x…" value="${S().wallet || ''}"><button data-act="wallet">Save wallet</button></div><p class="muted">Defaults to the wallet you logged in with – change it only if rewards should go to another address you control (Ethereum, Polygon, Base, BNB… all EVM). Never share your seed phrase.</p>`;
 }
 function saveWallet() { const a = $('#wallet').value.trim(); if (!S().user) return ctx.login();
   if (!/^0x[a-fA-F0-9]{40}$/.test(a)) return toast('❌ Not a valid EVM address (0x + 40 hex characters)', true); ctx.store.setWallet(a); toast('✅ Wallet saved'); ctx.afterChange(); }
@@ -142,13 +142,13 @@ const tagList = () => ['', ...new Set([...ownedTitles(S().inv), ...allBadges().f
 function profileHtml() {
   const u = S().user, st = S().stats, plays = Object.values(st.plays).reduce((a, b) => a + b, 0), l = L();
   const icons = allBadges().filter(b => (b.kind === 'rank' ? holds(b, ctx.boards, u.name) : S().badges[b.id])).map(b => `<span title="${b.name}">${b.icon}</span>`).join('') || '<span class="muted">none yet</span>';
-  return `<div class="pf">${avatar(u, 1)}<div><h3 style="margin:0;font-size:1.6rem">${u.name}</h3><span class="muted">${S().tag ? S().tag + ' · ' : ''}Discord · ${short(u.id)}</span><div class="bicons">${icons}</div></div></div>
+  return `<div class="pf">${avatar(u, 1)}<div><h3 style="margin:0;font-size:1.6rem">${esc(u.name)}</h3><span class="muted">${S().tag ? esc(S().tag) + ' · ' : ''}Wallet · ${short(u.id)}</span><div class="bicons">${icons}</div></div></div>
   <div class="stats"><div class="stat"><b>${f(S().pts)}</b>❄ Points</div><div class="stat"><b>${f(S().gems)}</b>💎 Gems</div><div class="stat"><b>${f(S().donated)}</b>Donated ❄</div><div class="stat"><b>${f(S().gemDonated)}</b>Donated 💎</div>
   <div class="stat"><b>${(l.shareB() * 100).toFixed(1)}%</b>Build share</div><div class="stat"><b>${(l.shareG() * 100).toFixed(1)}%</b>Gem share</div><div class="stat"><b>${f(st.earned)}</b>Earned in games</div><div class="stat"><b>${plays}</b>Rounds</div><div class="stat"><b>${S().doors.length}/24</b>Doors</div><div class="stat"><b>${f(dailyCap() - ctx.store.capLeft())}/${f(dailyCap())}</b>⚡ Earned today</div></div>
-  <h3>Nametag</h3><p class="muted">Shown next to your name on the leaderboards. Choose any title you have obtained (shop, events, badges):</p><div class="tags">${tagList().map((t, i) => `<button class="tagbtn ${S().tag === t ? 'on' : ''}" data-act="tag" data-id="${i}">${t || '— none —'}</button>`).join('')}</div>
+  <h3>Nametag</h3><p class="muted">Shown next to your name on the leaderboards. Choose any title you have obtained (shop, events, badges):</p><div class="tags">${tagList().map((t, i) => `<button class="tagbtn ${S().tag === t ? 'on' : ''}" data-act="tag" data-id="${i}">${esc(t) || '— none —'}</button>`).join('')}</div>
   <h3>Best scores</h3><div class="stats">` + GAMES.map(g => `<div class="stat"><img src="${g.img}" height="30" alt=""><br>${g.name}<b>${st.best[g.id] || '–'}</b></div>`).join('') + `</div>
-  <p class="muted">Wallet: ${S().wallet ? short(S().wallet) : 'not set yet (Prize & Wallet)'}</p>
-  <div class="acts"><button data-act="open" data-id="share">📤 Share stats</button><button class="ghost" data-act="open" data-id="badges">🏅 Badges</button><button class="ghost" data-act="copyid">🆔 Copy my user ID</button><button class="ghost" data-act="logout">🚪 Log out</button><button class="danger" data-act="delete">🗑 Delete account</button></div>` +
+  <p class="muted">Payout wallet: ${S().wallet ? short(S().wallet) : 'not set yet (Prize & Wallet)'}</p>
+  <div class="acts"><button data-act="open" data-id="share">📤 Share stats</button><button class="ghost" data-act="open" data-id="badges">🏅 Badges</button><button class="ghost" data-act="copyid">📋 Copy wallet address</button><button class="ghost" data-act="logout">🚪 Log out</button><button class="danger" data-act="delete">🗑 Delete account</button></div>` +
   (ctx.store.cheat ? `<details class="card2" open><summary>🧪 Test tools (demo mode only)</summary><div class="acts"><button class="ghost" data-act="cheat" data-id="pts">+500 ❄</button><button class="ghost" data-act="cheat" data-id="build">Complete all except Nutcracker</button><button class="ghost" data-act="cheat" data-id="all">Complete everything</button><button class="ghost" data-act="cheat" data-id="gems">+50 💎</button><button class="ghost" data-act="cheat" data-id="cap">Fill daily cap</button><button class="ghost" data-act="cheat" data-id="uncap">Reset daily cap</button><button class="danger" data-act="cheat" data-id="reset">Reset demo data</button></div></details>` : '');
 }
 
@@ -182,7 +182,7 @@ const radioAct = { rtoggle: () => { if (ctx.radio.toggle()) ctx.store.count('rad
 
 export function bind() {
   $('#layer').addEventListener('change', adminChange);
-  $('#layer').addEventListener('input', e => { if (e.target.id === 'vol') ctx.radio.setVol(+e.target.value); });
+  $('#layer').addEventListener('input', e => { if (e.target.id === 'vol') ctx.radio.setVol(+e.target.value); adminInput(e); });
   $('#layer').addEventListener('click', e => {
     if (e.target.id === 'layer') return closePanel();
     const b = e.target.closest('[data-act]'); if (!b) return; const id = b.dataset.id, a = b.dataset.act, need = () => S().user || (ctx.login(), false);
@@ -190,7 +190,7 @@ export function bind() {
     if (gemAct[a]) { if (need()) { gemAct[a](id); ctx.afterChange(); refresh(); } return; }
     if (radioAct[a]) { radioAct[a](id); ctx.afterChange(); refresh(); return; }
     ({ close: () => closePanel(), play: () => play(id), back: () => open('games'), tog: () => open('goals'), open: () => open(id), donate: () => donate(id), max: () => donate(id, true), door: () => door(+id), wallet: saveWallet,
-      tab: () => { boardTab = id; boardFill(); }, tag: () => { ctx.store.setTag(tagList()[+id] || ''); toast('🏷 Nametag updated'); ctx.afterChange(); refresh(); }, copyid: () => navigator.clipboard?.writeText(S().user.id).then(() => toast('🆔 User ID copied')), cheat: () => { ctx.store.cheat(id); ctx.afterChange(); refresh(); },
+      tab: () => { boardTab = id; boardFill(); }, tag: () => { ctx.store.setTag(tagList()[+id] || ''); toast('🏷 Nametag updated'); ctx.afterChange(); refresh(); }, copyid: () => navigator.clipboard?.writeText(S().user.id).then(() => toast('📋 Wallet address copied')), cheat: () => { ctx.store.cheat(id); ctx.afterChange(); refresh(); },
       logout: () => { if (closePanel()) { ctx.store.logout(); ctx.afterChange(); toast('Logged out – see you soon! 🎅'); } },
       delete: () => { if (confirm('Delete your account and its data? This cannot be undone.\n(Points you already donated stay in the community goals.)')) { closePanel(); Promise.resolve(ctx.store.deleteAccount()).then(() => { ctx.afterChange(); toast('Account deleted'); }); } } })[a]?.();
   });

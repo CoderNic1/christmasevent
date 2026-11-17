@@ -7,12 +7,13 @@ import { allBadges } from './badges.js';
 import { Radio } from './radio.js';
 import { applyLive, events, left, nowMs, dailyCap } from './remote.js';
 import { isAdmin } from './admin.js';
-import { $, f, snow, toast } from './ui.js';
+import { $, f, snow, toast, esc } from './ui.js';
 import { ctx } from './ctx.js';
 import { open, refresh, bind, avatar } from './panels.js';
+import { openLogin, nameStep } from './login.js';
 let store = createStore(new URLSearchParams(location.search).has('demo')); const S = () => store.state, L = logic(S); ctx.L = L; ctx.radio = new Radio();
 const fail = e => { $('#err').hidden = false; $('#err').textContent = '⚠ ' + e.message; };
-ctx.login = async () => { try { await store.login(); render(); loadBoards(); } catch (e) { fail(e); } };
+ctx.login = () => openLogin().catch(fail);   // wallet login dialog (js/login.js); it calls ctx.afterChange() when done
 let bt = 0; async function loadBoards() { if (Date.now() - bt < 20000) return; bt = Date.now(); try { ctx.boards.build = await store.board('build'); ctx.boards.gems = await store.board('gems'); } catch (e) { console.warn(e); } }
 
 function checkBadges() {          // award permanent + limited badges (rank badges are live, never stored)
@@ -22,7 +23,7 @@ function checkBadges() {          // award permanent + limited badges (rank badg
 }
 function render() {
   const u = S().user, n = L.next();
-  $('#profile').innerHTML = u ? `${avatar(u)}${u.name}` : '💬 Login with Discord';
+  $('#profile').innerHTML = u ? `${avatar(u)}${esc(u.name)}` : '👛 Connect wallet';
   $('#ptschip').hidden = !u; $('#ptschip').textContent = `❄ ${f(S().pts)}`;
   $('#gemchip').hidden = !(u && (S().gems || L.exchangeOpen())); $('#gemchip').textContent = `💎 ${f(S().gems)}`;
   $('#capchip').hidden = !u; $('#capchip').textContent = `⚡ ${f(dailyCap() - store.capLeft())}/${f(dailyCap())}`;
@@ -60,3 +61,4 @@ catch (e) { fail(new Error('Firebase failed (' + e.message + ') – running in d
 ctx.store = store; applyLive(await store.loadLive());
 if (C.firebase) setInterval(async () => { applyLive(await store.loadLive()); render(); }, 300000);   // admin changes arrive within 5 min (1 read)
 store.onChange(render); render(); tick(); setInterval(tick, 1000);
+if (S().user && !S().named) nameStep('');   // logged in earlier but never picked a username

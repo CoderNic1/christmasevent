@@ -2,12 +2,13 @@
 import { CONFIG as C } from './config.js';
 import { BASE_GOALS, live, applyLive, nowMs } from './remote.js';
 import { GAMES } from './games.js';
-import { $, f, toast, body } from './ui.js';
+import { $, f, toast, body, current, esc as xesc } from './ui.js';
+import { isAddr } from './wallet.js';
 import { ctx } from './ctx.js';
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 let draft = null, tab = 'events', infoOpen = null; const D = () => draft ||= JSON.parse(JSON.stringify(live || {}));
 export const isAdmin = () => !!ctx.store?.admin;
-export const adminOpen = () => { draft = null; };
+export const adminOpen = () => { draft = null; if (tab === 'whitelist') wlRefreshCount(); };
 const N = (k, l, d, h) => ({ k, l, t: 'number', d, h });
 // ---- every event type: what it does, its parameters (with help + default) and an example ----
 const TYPES = {
@@ -65,11 +66,47 @@ function economy() { const c = draft, L = ctx.L, canFreeze = ctx.store.autoLock 
   <label class="blk">Northern-lights levels (💎 totals, comma separated)<input data-a="aurora" value="${(c.aurora || C.aurora).join(',')}"></label></div>
   <div class="card2"><h3>🏁 Payouts</h3>${canFreeze ? `<p class="muted">Building is complete. Freeze the Build bracket at the current value (${f(Math.round(L.poolRaw() * C.split.build))} ${C.currency}):</p><div class="acts"><button class="danger" data-act="afreeze">🔒 Freeze Build bracket now</button></div>` : '<p class="muted">The Build bracket can be frozen here once every goal is complete.</p>'}
   <div class="acts"><button class="ghost" data-act="aexport">⬇ Export payouts CSV</button></div><p class="muted">CSV = every player with wallet, donated amounts and the reward from the current brackets.</p></div>`; }
+// ---------- 👛 whitelist: which wallets may log in ----------
+const WL = { rows: [], last: null, done: true, loaded: false, count: null, q: '', addr: '', discord: '', note: '', bulk: '', hit: undefined, msg: '' };   // form values live here so a background refresh never wipes them
+const wlShort = a => a.slice(0, 8) + '…' + a.slice(-6);
+const wlRow = r => `<div class="evrow"><span><code style="word-break:break-all">${xesc(r.address)}</code>${r.discord ? ` <b>${xesc(r.discord)}</b>` : ''}${r.note ? ` <small>${xesc(r.note)}</small>` : ''}</span><button class="danger" data-act="wlrm" data-id="${xesc(r.address)}" title="Remove from whitelist">✕</button></div>`;
+function whitelist() {
+  const q = WL.q.trim().toLowerCase(), rows = q ? WL.rows.filter(r => r.address.includes(q) || (r.discord || '').toLowerCase().includes(q) || (r.note || '').toLowerCase().includes(q)) : WL.rows;
+  return `<div class="card2"><h3>👛 Whitelisted wallets ${WL.count != null ? `<small>${f(WL.count)} on the list</small>` : ''}</h3>
+  <p class="muted">Only these wallets (and admins) can log in and earn. Add NFT holders here. The optional <b>Discord name</b> is suggested as their username on first login. Removing a wallet blocks it straight away; the player’s progress is kept.</p>
+  <div class="form"><label>Wallet address<input data-wl="addr" placeholder="0x…" autocomplete="off" spellcheck="false" value="${xesc(WL.addr)}"></label><label>Discord name (optional)<input data-wl="discord" maxlength="40" value="${xesc(WL.discord)}"></label><label>Note (optional)<input data-wl="note" maxlength="100" placeholder="e.g. holder #123" value="${xesc(WL.note)}"></label></div>
+  <div class="acts"><button data-act="wladd">➕ Add wallet</button></div></div>
+  <div class="card2"><h3>📥 Bulk import</h3><p class="muted">One wallet per line: <code>0xaddress</code> or <code>0xaddress, discordname</code>. Lines starting with # are ignored. Existing wallets are updated, nothing is removed.</p>
+  <textarea data-wl="bulk" rows="5" class="mono" placeholder="0x1234…abcd, frosty&#10;0x9876…fedc">${xesc(WL.bulk)}</textarea><div class="acts"><button data-act="wlbulk">📥 Import list</button></div>${WL.msg ? `<p class="muted">${xesc(WL.msg)}</p>` : ''}</div>
+  <div class="card2"><h3>🔎 Check / browse</h3><div class="don"><input data-wl="q" placeholder="Paste a full address to check it – or filter the loaded list…" autocomplete="off" style="flex:1;min-width:200px" value="${xesc(WL.q)}"><button class="ghost" data-act="wlfind">Check wallet</button><button class="ghost" data-act="wlload">${WL.loaded ? '↻ Reload list' : '📋 Load list'}</button></div>
+  ${WL.hit === undefined ? '' : WL.hit ? `<p>✅ <b>Whitelisted</b></p>${wlRow(WL.hit)}` : `<p>❌ <b>Not on the whitelist.</b> ${isAddr(WL.q.trim()) ? '<button class="mini" data-act="wlquick">➕ Add this wallet</button>' : ''}</p>`}
+  ${WL.loaded ? (rows.length ? rows.map(wlRow).join('') : '<p class="muted">Nothing matches.</p>') + (WL.done ? `<p class="muted">${f(WL.rows.length)} loaded – end of list.</p>` : `<div class="acts"><button class="ghost" data-act="wlmore">Load more (${f(WL.rows.length)} loaded)</button></div>`) : '<p class="muted">The list is not loaded automatically (it can be long and every row is a database read).</p>'}</div>`;
+}
+const wlEntry = (address, discord, note) => ({ address: address.toLowerCase(), ...(discord ? { discord: discord.trim().slice(0, 40) } : {}), ...(note ? { note: note.trim().slice(0, 100) } : {}) });
+async function wlRefreshCount() { try { WL.count = await ctx.store.wlCount(); } catch (e) { console.warn(e); } if (current() === 'admin' && tab === 'whitelist') redraw(); }
+async function wlPage(more) {
+  const r = await ctx.store.wlList(more ? WL.last : null); WL.rows = more ? [...WL.rows, ...r.rows] : r.rows; WL.last = r.last; WL.done = r.done; WL.loaded = true;
+}
+const wlAct = {
+  wladd: async () => { const a = WL.addr.trim(); if (!isAddr(a)) return toast('❌ Not a valid address (0x + 40 hex characters)', true);
+    await ctx.store.wlSet([wlEntry(a, WL.discord, WL.note)]); WL.hit = await ctx.store.wlGet(a.toLowerCase()); WL.q = ''; Object.assign(WL, { addr: '', discord: '', note: '', loaded: false, rows: [] }); toast('✅ Wallet whitelisted'); wlRefreshCount(); },
+  wlquick: async () => { const a = WL.q.trim(); await ctx.store.wlSet([wlEntry(a)]); WL.hit = await ctx.store.wlGet(a.toLowerCase()); toast('✅ Wallet whitelisted'); wlRefreshCount(); },
+  wlbulk: async () => { const ok = new Map(), bad = [];
+    WL.bulk.split(/\r?\n/).forEach((line, i) => { line = line.trim(); if (!line || line[0] === '#') return; const m = line.match(/^(0x[a-fA-F0-9]{40})(?:[\s,;]+(.+))?$/); if (!m) return bad.push(i + 1); ok.set(m[1].toLowerCase(), wlEntry(m[1], m[2])); });
+    if (!ok.size) { WL.msg = bad.length ? `⚠ No valid lines (check lines ${bad.slice(0, 10).join(', ')}).` : 'Paste some wallets first.'; return; }
+    await ctx.store.wlSet([...ok.values()]); WL.msg = `✅ ${f(ok.size)} wallet${ok.size > 1 ? 's' : ''} saved${bad.length ? ` · ⚠ ${bad.length} line${bad.length > 1 ? 's' : ''} skipped as invalid (line ${bad.slice(0, 10).join(', ')}${bad.length > 10 ? '…' : ''})` : ''}.`;
+    if (!bad.length) WL.bulk = ''; WL.loaded = false; WL.rows = []; wlRefreshCount(); },
+  wlfind: async () => { const a = WL.q.trim().toLowerCase(); if (!isAddr(a)) return toast('Paste a full wallet address (0x…) to check it', true); WL.hit = await ctx.store.wlGet(a); },
+  wlload: async () => { await wlPage(false); },
+  wlmore: async () => { await wlPage(true); },
+  wlrm: async id => { if (!confirm(`Remove ${wlShort(id)} from the whitelist?\n\nThey can no longer log in or earn. Their progress is kept – adding the wallet again restores access.`)) return;
+    await ctx.store.wlRemove(id); WL.rows = WL.rows.filter(r => r.address !== id); if (WL.hit?.address === id) WL.hit = null; toast('Wallet removed'); wlRefreshCount(); },
+};
 const raw = () => `<p class="muted">Advanced: the whole live config. Same content as Firestore doc <code>config/live</code>.</p><textarea id="rawjson" rows="16" class="mono">${esc(JSON.stringify(draft, null, 2))}</textarea>`;
 export function adminHtml() {
-  D(); const T = { events: ['🎉 Events', events], calendar: ['📅 Calendar', calendar], goals: ['🎁 Goals', goals], economy: ['💰 Economy', economy], raw: ['{ } JSON', raw] };
+  D(); const T = { events: ['🎉 Events', events], calendar: ['📅 Calendar', calendar], goals: ['🎁 Goals', goals], economy: ['💰 Economy', economy], whitelist: ['👛 Whitelist', whitelist], raw: ['{ } JSON', raw] };
   return `<div class="tabs wrap">${Object.entries(T).map(([k, v]) => `<button class="${k === tab ? '' : 'ghost'}" data-act="atab" data-id="${k}">${v[0]}</button>`).join('')}</div>` + T[tab][1]() +
-    (['events'].includes(tab) ? '' : `<div class="acts"><button data-act="asave">💾 Save & publish</button></div>`) + `<p class="muted">Changes go live for everyone within ~5 minutes (clients re-read the config every 5 min).</p>`;
+    (['events', 'whitelist'].includes(tab) ? '' : `<div class="acts"><button data-act="asave">💾 Save & publish</button></div>`) + (tab === 'whitelist' ? '<p class="muted">Whitelist changes apply immediately: new wallets can log in right away, removed wallets are blocked on their next save.</p>' : `<p class="muted">Changes go live for everyone within ~5 minutes (clients re-read the config every 5 min).</p>`);
 }
 const val = s => $(s)?.value;
 function collect() {
@@ -85,10 +122,11 @@ function collect() {
 }
 async function publish() { await ctx.store.saveLive(draft); applyLive(draft); ctx.afterChange(); toast('✅ Published'); }
 const redraw = () => { body().innerHTML = adminHtml(); };
-export function adminChange(e) { if (e.target.dataset?.e === 'type') { readEv(); ev.type = e.target.value; ev.params = {}; redraw(); } }
+export function adminChange(e) { if (e.target.dataset?.e === 'type') { readEv(); ev.type = e.target.value; ev.params = {}; redraw(); } if (e.target.dataset?.wl === 'q') { WL.q = e.target.value; redraw(); } }
+export function adminInput(e) { const k = e.target.dataset?.wl; if (k && k !== 'q') WL[k] = e.target.value; if (k === 'q') WL.q = e.target.value; }   // whitelist form values survive background re-renders
 const download = (name, text, type = 'text/csv') => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
 export function adminAct(a, id) {
-  const fn = { atab: () => { try { readEv(); collect(); } catch (e) { return toast('⚠ ' + e.message, true); } tab = id; redraw(); },
+  const fn = { atab: () => { try { readEv(); collect(); } catch (e) { return toast('⚠ ' + e.message, true); } tab = id; redraw(); if (id === 'whitelist' && WL.count == null) wlRefreshCount(); },
     asave: async () => { try { collect(); await publish(); redraw(); } catch (e) { toast('⚠ ' + e.message, true); } },
     ainfo: () => { readEv(); infoOpen = infoOpen === id ? null : id; redraw(); },
     atpl: () => { const t = TEMPLATES[+id]; ev = { type: t[1], icon: t[2], title: t[3], desc: t[4], start: Date.now(), end: Date.now() + t[6] * 36e5, params: t[5] }; infoOpen = null; redraw(); },
@@ -102,5 +140,6 @@ export function adminAct(a, id) {
     aexport: async () => { try { const rows = await ctx.store.exportPayouts(), L = ctx.L, br = L.brackets(), tb = L.totalBuilt(), tg = ctx.store.state.cgems;   // shares use the community totals (same as the leaderboards)
         const csv = ['uid,name,wallet,donated_build,donated_gems,build_share_pct,gem_share_pct,reward_' + C.currency, ...rows.map(r => { const sb = tb ? r.donated / tb : 0, sg = tg ? r.gemDonated / tg : 0;
           return [r.id, `"${String(r.name).replace(/"/g, '""')}"`, r.wallet, r.donated, r.gemDonated, (sb * 100).toFixed(3), (sg * 100).toFixed(3), (sb * br.B + sg * br.G).toFixed(2)].join(','); })].join('\n'); download('payouts.csv', csv); toast(`⬇ ${rows.length} players exported`); } catch (e) { toast('⚠ ' + e.message, true); } } }[a];
+  if (!fn && wlAct[a]) { Promise.resolve(wlAct[a](id)).then(() => current() === 'admin' && redraw()).catch(e => toast('⚠ ' + (e.message || e), true)); return true; }
   if (!fn) return false; fn(); return true;
 }

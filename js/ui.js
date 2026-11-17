@@ -1,5 +1,6 @@
 // Small UI helpers: DOM shortcuts, toasts, snow, overlay panel layer, tiny sound.
 export const $ = (s, r = document) => r.querySelector(s), f = n => Math.floor(n).toLocaleString();
+export const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');   // every player-controlled string (names, tags) goes through this before innerHTML
 export function toast(msg, bad) { const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg; $('#toasts').append(t); setTimeout(() => t.remove(), 3000); }
 let cur = null, guard = null, onClose = null;
 export const current = () => cur, setGuard = g => guard = g;

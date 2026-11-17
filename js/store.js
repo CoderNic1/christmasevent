@@ -1,19 +1,23 @@
 // One interface, two backends: Demo (localStorage, several test accounts) and Fire (Firestore, batched writes, rules-compatible bookkeeping).
 import { CONFIG as C } from './config.js';
-import { discordLogin } from './discord.js';
+import { NAME_RE } from './names.js';
 import { gemRate, dailyCap } from './remote.js';
-const KEY = 'xmas_demo_v4', G = 'https://www.gstatic.com/firebasejs/10.12.0/';
+const KEY = 'xmas_demo_v5', G = 'https://www.gstatic.com/firebasejs/10.12.0/';
 const dayInt = () => { const d = new Date(); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };   // same formula as firestore.rules
 // Bookkeeping fields are what lets the security rules verify points: pts + donated + exchCost == earnedTotal  and  gems + gemDonated + shopSpent == gemsMade
-const blankU = () => ({ pts: 0, donated: 0, gems: 0, gemDonated: 0, wallet: '', doors: [], inv: { x2: 0, cdreset: 0 }, badges: {}, tag: '', earnedTotal: 0, earnedToday: 0, capDay: 0, exchCost: 0, gemsMade: 0, shopSpent: 0, stats: { plays: {}, best: {}, earned: 0, c: {} } });
+const blankU = () => ({ named: false, pts: 0, donated: 0, gems: 0, gemDonated: 0, wallet: '', doors: [], inv: { x2: 0, cdreset: 0 }, badges: {}, tag: '', earnedTotal: 0, earnedToday: 0, capDay: 0, exchCost: 0, gemsMade: 0, shopSpent: 0, stats: { plays: {}, best: {}, earned: 0, c: {} } });
 const SEED = { lights: 600, tree: 700, fire: 400, presents: 350, train: 250 };
+const placeholder = id => 'Elf ' + id.slice(2, 8);   // until the player picks a username (rules require exactly this shape)
+const notWl = () => Object.assign(new Error('not_whitelisted'), { code: 'not_whitelisted' });
+const nameTaken = () => Object.assign(new Error('That username is already taken.'), { code: 'name_taken' });
+const DEMO_WL = { '0x1111111111111111111111111111111111111111': { discord: 'Frosty Fan' }, '0x2222222222222222222222222222222222222222': { discord: 'candycane' }, '0x3333333333333333333333333333333333333333': {} };
 const hue = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 360;
 
 class Base {
   cbs = []; s = { user: null, goals: {}, cgems: 0, buildLocked: null, ...blankU() }; autoLock = true; lastSync = 0;
   get state() { return this.s; }
   onChange(f) { this.cbs.push(f); } emit() { this.cbs.forEach(f => f()); }
-  logout() {} deleteAccount() {} dirty() {} hook() {} lockHook() {} unsynced() { return 0; }
+  logout() {} deleteAccount() {} claimName() {} dirty() {} hook() {} lockHook() {} unsynced() { return 0; }
   // ---- earning (all sources pass through the HARD DAILY CAP) ----
   rollover() { const d = dayInt(); if (this.s.capDay !== d) { this.s.capDay = d; this.s.earnedToday = this.unsynced(); } }
   capLeft() { this.rollover(); return Math.max(0, dailyCap() - this.s.earnedToday); }
@@ -33,17 +37,33 @@ class Base {
   lockBuild(v) { this.s.buildLocked = v; this.lockHook(v); this.emit(); }
 }
 
-class Demo extends Base {   // localStorage backend; placeholder Discord login; several test accounts
+class Demo extends Base {   // localStorage backend; wallet login without a server (whitelist kept in localStorage); several test accounts
   constructor() {
     super(); this.db = JSON.parse(localStorage.getItem(KEY) || 'null') || { goals: { ...SEED }, cgems: 0, buildLocked: null, users: {}, me: null };
+    this.db.whitelist ||= JSON.parse(JSON.stringify(DEMO_WL));
     Object.assign(this.s, { goals: this.db.goals, cgems: this.db.cgems, buildLocked: this.db.buildLocked }); this.sel(this.db.me);
   }
   get admin() { return new URLSearchParams(location.search).has('admin'); } set admin(v) {}
   sel(id) { const u = this.db.users[id]; this.db.me = u ? id : null; this.s.user = u ? { id, name: u.name, color: u.color } : null; Object.assign(this.s, blankU(), u || {}); }
   save() { const u = this.db.users[this.db.me]; if (u) for (const k of Object.keys(blankU())) u[k] = this.s[k];
     Object.assign(this.db, { goals: this.s.goals, cgems: this.s.cgems, buildLocked: this.s.buildLocked }); localStorage.setItem(KEY, JSON.stringify(this.db)); this.lastSync = Date.now(); }
-  async init() { return this.s.user; }
-  async login() { const p = await discordLogin(); if (!p) return null; this.db.users[p.id] ||= { name: p.name, color: p.color, ...blankU() }; this.sel(p.id); this.save(); this.emit(); return this.s.user; }
+  async init() { const id = this.db.me; if (id && !this.db.whitelist[id]) { this.sel(null); this.save(); dispatchEvent(new CustomEvent('xmas-notice', { detail: '🚫 Your wallet is no longer whitelisted.' })); } return this.s.user; }
+  get demoHints() { return Object.keys(this.db.whitelist).slice(0, 3); }
+  async signIn({ address }) {      // demo: no signature check (nothing to protect); the whitelist check is the same as in production
+    const id = address.toLowerCase(), wl = this.db.whitelist[id]; if (!wl) throw notWl();
+    this.db.users[id] ||= { name: placeholder(id), color: `hsl(${hue(id)} 60% 50%)`, ...blankU(), wallet: id }; this.sel(id); this.save(); this.emit(); return { suggest: wl?.discord || '' };
+  }
+  async claimName(name) {
+    if (!NAME_RE.test(name)) throw new Error('Invalid username.'); const key = name.toLowerCase();
+    if (['frosty', 'rudolf', 'grinch', 'buddy'].includes(key) || Object.entries(this.db.users).some(([id, u]) => id !== this.db.me && u.named && u.name.toLowerCase() === key)) throw nameTaken();
+    if (this.s.named) throw new Error('Your username is already set.'); const u = this.db.users[this.db.me]; u.name = name; this.s.named = true; this.s.user = { ...this.s.user, name }; this.save(); this.emit();
+  }
+  // ---- whitelist (admin) ----
+  async wlCount() { return Object.keys(this.db.whitelist).length; }
+  async wlGet(a) { const w = this.db.whitelist[a]; return w ? { address: a, ...w } : null; }
+  async wlList(after) { const ks = Object.keys(this.db.whitelist).sort(), i = after ? ks.indexOf(after) + 1 : 0, page = ks.slice(i, i + 100); return { rows: page.map(a => ({ address: a, ...this.db.whitelist[a] })), last: page.at(-1) || null, done: i + 100 >= ks.length }; }
+  async wlSet(es) { for (const e of es) this.db.whitelist[e.address] = { ...(this.db.whitelist[e.address] || {}), ...(e.discord ? { discord: e.discord } : {}), ...(e.note ? { note: e.note } : {}), by: this.db.me || 'demo-admin' }; this.save(); }
+  async wlRemove(a) { delete this.db.whitelist[a]; this.save(); }
   logout() { this.save(); this.sel(null); this.save(); this.emit(); }
   deleteAccount() { delete this.db.users[this.db.me]; this.sel(null); this.save(); this.emit(); }
   dirty() { this.save(); } hook() { this.save(); } lockHook() { this.s.cgems += 65; this.save(); }   // 65 💎 = fake NPC gem donors
@@ -74,32 +94,54 @@ class Fire extends Base {   // Firestore backend. Data layout + invariants are e
   pend = { goals: {}, donated: 0, cg: 0, touch: 0 }; bc = {}; bt = {}; autoLock = false; admin = false; live = true; synced = null; fails = 0; lastTry = 0;
   unsynced() { return this.synced == null ? 0 : Math.max(0, this.s.earnedTotal - this.synced); }
   async init() {
-    const [app, auth, fs] = await Promise.all(['app', 'auth', 'firestore'].map(m => import(`${G}firebase-${m}.js`)));
-    this.fs = fs; this.A = auth; this.auth = auth.getAuth(app.initializeApp(C.firebase)); this.db = fs.getFirestore();
-    const tok = new URLSearchParams(location.hash.slice(1)).get('token');   // returned by the Discord Cloud Function
-    if (tok) { await auth.signInWithCustomToken(this.auth, tok); history.replaceState(null, '', location.pathname); }
+    const [app, auth, fs, fn] = await Promise.all(['app', 'auth', 'firestore', 'functions'].map(m => import(`${G}firebase-${m}.js`)));
+    const fb = app.initializeApp(C.firebase); this.fs = fs; this.A = auth; this.F = fn; this.auth = auth.getAuth(fb); this.db = fs.getFirestore(); this.fn = fn.getFunctions(fb, C.functionsRegion);
     await this.auth.authStateReady(); this.poll(); setInterval(() => this.poll(), C.pollMs); setInterval(() => this.flush().catch(e => this.failed(e)), C.flushMs);
     addEventListener('visibilitychange', () => document.hidden && Date.now() - this.lastTry > 10000 && this.flush().catch(e => this.failed(e)));
-    const u = this.auth.currentUser; return u ? this.load(u) : null;
+    const u = this.auth.currentUser; if (!u) return null;
+    try { return await this.load(u); } catch (e) { if (e.code !== 'not_whitelisted') throw e; dispatchEvent(new CustomEvent('xmas-notice', { detail: '🚫 Your wallet is no longer whitelisted.' })); return null; }   // removed from the list while logged in
   }
   async load(u) {
-    const { doc, getDoc, setDoc, serverTimestamp } = this.fs, ref = this.uref = doc(this.db, 'users', u.uid), claims = (await u.getIdTokenResult()).claims, name = String(claims.name || u.displayName || 'Elf').slice(0, 24);
+    const { doc, getDoc, setDoc, serverTimestamp } = this.fs, ref = this.uref = doc(this.db, 'users', u.uid);      // uid = lower-case wallet address
+    const isAdm = (await getDoc(doc(this.db, 'admins', u.uid))).exists();
+    if (!isAdm && !(await getDoc(doc(this.db, 'whitelist', u.uid))).exists()) { await this.auth.signOut(); throw notWl(); }   // the rules re-check this on every write
     let snap = await getDoc(ref); const { wallet, ...fresh } = blankU();
-    if (!snap.exists()) { await setDoc(ref, { name, ...fresh, lastWrite: serverTimestamp() }); snap = await getDoc(ref); }
+    if (!snap.exists()) { await setDoc(ref, { name: placeholder(u.uid), ...fresh, lastWrite: serverTimestamp() }); snap = await getDoc(ref); }
     const d = snap.data(); if (d.deleted) { await this.auth.signOut(); throw new Error('This account was deleted. Ask an admin to restore it.'); }
     Object.assign(this.s, blankU(), d, { user: { id: u.uid, name: d.name, color: `hsl(${hue(u.uid)} 60% 50%)` } }); this.synced = this.s.earnedTotal; this.pend = { goals: {}, donated: 0, cg: 0, touch: 0 };
     const w = await getDoc(doc(this.db, 'wallets', u.uid)); this.s.wallet = w.exists() ? w.data().address : '';
-    this.admin = (await getDoc(doc(this.db, 'admins', u.uid))).exists(); this.lastSync = Date.now(); this.emit(); return this.s.user;
+    if (!w.exists()) { this.s.wallet = u.uid; setDoc(doc(this.db, 'wallets', u.uid), { address: u.uid, updated: serverTimestamp() }).catch(console.warn); }   // payout wallet defaults to the login wallet (can be changed in Prize & Wallet)
+    this.admin = isAdm; this.lastSync = Date.now(); this.emit(); return this.s.user;
   }
-  async login() {
-    if (C.discordAuthUrl) { location.href = C.discordAuthUrl; return null; }
-    if (!C.allowGoogleLogin) throw new Error('Set CONFIG.discordAuthUrl (see SETUP.md)');
-    const A = this.A; await A.signInWithPopup(this.auth, new A.GoogleAuthProvider()); return this.load(this.auth.currentUser);
+  async signIn({ address, message, signature }) {   // the Cloud Function verifies the signature + whitelist and returns a custom token
+    let r; try { r = (await this.F.httpsCallable(this.fn, 'walletLogin')({ address, message, signature })).data; }
+    catch (e) { if (e.details?.reason === 'not_whitelisted') throw notWl(); throw e; }
+    await this.A.signInWithCustomToken(this.auth, r.token); await this.load(this.auth.currentUser); return { suggest: r.suggest || '' };
   }
+  async claimName(name) {           // username is unique (usernames/<lower-case name>, create-only) and can be set once – both enforced by the rules
+    if (!NAME_RE.test(name)) throw new Error('Invalid username.'); const { writeBatch, doc, getDoc, serverTimestamp } = this.fs, ref = doc(this.db, 'usernames', name.toLowerCase());
+    if ((await getDoc(ref)).exists()) throw nameTaken();
+    const b = writeBatch(this.db); b.set(ref, { uid: this.s.user.id, name }); b.update(this.uref, { name, named: true, lastWrite: serverTimestamp() });
+    try { await b.commit(); } catch (e) { if (e.code === 'permission-denied') throw nameTaken(); throw e; }     // lost a race for the same name
+    this.s.named = true; this.s.user = { ...this.s.user, name }; this.emit();
+  }
+  // ---- whitelist (admin only – enforced by the rules) ----
+  async wlCount() { const { collection, getCountFromServer } = this.fs; return (await getCountFromServer(collection(this.db, 'whitelist'))).data().count; }
+  async wlGet(a) { const d = await this.fs.getDoc(this.fs.doc(this.db, 'whitelist', a)); return d.exists() ? { address: a, ...d.data() } : null; }
+  async wlList(after) {
+    const { collection, query, orderBy, limit, startAfter, getDocs, documentId } = this.fs, q = await getDocs(query(collection(this.db, 'whitelist'), orderBy(documentId()), ...(after ? [startAfter(after)] : []), limit(100)));
+    return { rows: q.docs.map(d => ({ address: d.id, ...d.data() })), last: q.docs.at(-1)?.id || null, done: q.size < 100 };
+  }
+  async wlSet(es) {                 // merge: re-adding a wallet never erases its Discord name / note
+    const { writeBatch, doc, serverTimestamp } = this.fs;
+    for (let i = 0; i < es.length; i += 400) { const b = writeBatch(this.db); es.slice(i, i + 400).forEach(e => b.set(doc(this.db, 'whitelist', e.address), { ...(e.discord ? { discord: e.discord } : {}), ...(e.note ? { note: e.note } : {}), updated: serverTimestamp(), by: this.s.user.id }, { merge: true })); await b.commit(); }
+  }
+  async wlRemove(a) { await this.fs.deleteDoc(this.fs.doc(this.db, 'whitelist', a)); }
   async logout() { await this.flush().catch(() => { }); await this.auth.signOut(); location.reload(); }
   async deleteAccount() {      // anonymise (rules forbid deleting the doc: that would reset the daily cap). Admin can hard-delete in the console.
-    const { updateDoc, deleteDoc, doc, serverTimestamp } = this.fs; await deleteDoc(doc(this.db, 'wallets', this.s.user.id)).catch(() => { });
-    await updateDoc(this.uref, { deleted: true, name: 'Deleted elf', tag: '', lastWrite: serverTimestamp() }); await this.auth.signOut(); location.reload();
+    const { writeBatch, doc, serverTimestamp } = this.fs, b = writeBatch(this.db), id = this.s.user.id;      // one batch: frees the username, removes the payout wallet, anonymises the account
+    b.delete(doc(this.db, 'wallets', id)); if (this.s.named) b.delete(doc(this.db, 'usernames', this.s.user.name.toLowerCase()));
+    b.update(this.uref, { deleted: true, name: 'Deleted elf', tag: '', lastWrite: serverTimestamp() }); await b.commit(); await this.auth.signOut(); location.reload();
   }
   async poll() {
     const { doc, getDoc } = this.fs; let d; try { d = await getDoc(doc(this.db, 'community', 'state')); } catch (e) { return console.warn(e); }

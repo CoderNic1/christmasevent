@@ -5,9 +5,9 @@ export const CONFIG = {
   // Firebase web config (public by design – security comes from firestore.rules). Add ?demo=1 to the URL to force local demo mode.
   firebase: { apiKey: 'AIzaSyD7oU_AxAONI-1xib1AEAVxLTBeG6gCibw', authDomain: 'christmasevent-28619.firebaseapp.com', projectId: 'christmasevent-28619',
               storageBucket: 'christmasevent-28619.firebasestorage.app', messagingSenderId: '843500826552', appId: '1:843500826552:web:38489bdad3173060b4694d' },
-  allowGoogleLogin: true,    // TEMPORARY fallback login while the Discord Cloud Function is not deployed (set false in production)
+  functionsRegion: 'europe-west1',   // region of the walletLogin Cloud Function (functions/index.js)
+  walletConnectProjectId: '',        // OPTIONAL: free project id from https://dashboard.reown.com → shows a "WalletConnect" button (QR / deep link for the Crypto.com app and other mobile wallets). Empty = hidden.
   dailyCap: 400,             // HARD CAP: max ❄ a player can EARN per UTC day (games + doors + room gifts). Events can raise it (type "cap").
-  discordAuthUrl: '',        // Cloud Function URL that starts Discord OAuth (see README)
   flushMs: 60000, pollMs: 60000, boardMs: 300000,   // batched writes / community poll / leaderboard cache
   currency: 'USDC', basePool: 500,
   // PRIZE POOL: base + a bonus for every tier reached. Tiers are based on TOTAL POINTS DONATED

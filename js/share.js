@@ -22,7 +22,7 @@ export async function makeCard() {
   // right side
   const x0 = 770; g.textBaseline = 'top'; g.fillStyle = '#fff'; g.font = `700 46px ${head}`; g.fillText('🎄 Community Christmas', 28, 28);
   g.font = `700 22px ${body}`; g.fillStyle = '#f5c542'; const days = Math.max(0, Math.ceil((new Date(C.eventEnd) - Date.now()) / 864e5)); g.fillText(days ? `${days} days until Christmas · help us build the room!` : 'Merry Christmas! 🎅', 30, 78);
-  g.fillStyle = u.color || '#5865f2'; g.beginPath(); g.arc(x0 + 34, 148, 34, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `800 34px ${body}`; g.textAlign = 'center'; g.fillText(u.name[0].toUpperCase(), x0 + 34, 130); g.textAlign = 'left';
+  g.fillStyle = u.color || '#c9892b'; g.beginPath(); g.arc(x0 + 34, 148, 34, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `800 34px ${body}`; g.textAlign = 'center'; g.fillText(u.name[0].toUpperCase(), x0 + 34, 130); g.textAlign = 'left';
   g.font = `800 34px ${body}`; g.fillText(u.name.slice(0, 16), x0 + 84, 118); g.font = `600 20px ${body}`; g.fillStyle = '#9fb4d3'; g.fillText(S.tag || 'Christmas helper', x0 + 84, 160);
   const rb = rankOf(ctx.boards, 'build', u.name), rg = rankOf(ctx.boards, 'gems', u.name), lv = C.goals.reduce((a, q) => a + L.lvl(q), 0), mx = C.goals.reduce((a, q) => a + L.max(q), 0);
   const stats = [['❄ Donated', f(S.donated)], ['🏗 Build rank', rb ? '#' + rb : '–'], ['📈 Build share', (L.shareB() * 100).toFixed(1) + '%'], ['💎 Gems donated', f(S.gemDonated)], ['💠 Gem rank', rg ? '#' + rg : '–'], ['🎁 Room upgrades', `${lv}/${mx}`]];
